@@ -47,13 +47,14 @@ private final class DeviceBadge: NSView {
 
 private final class DeviceRow: NSButton {
     let uid: String
-    private var hovering = false
-    private var hoverArea: NSTrackingArea?
     init(name: String, uid: String, kind: String, selected: Bool, action: Selector, target: AnyObject) {
         self.uid = uid
         super.init(frame: .zero)
         title = ""
-        isBordered = false
+        isBordered = true
+        bezelStyle = .accessoryBarAction
+        showsBorderOnlyWhileMouseInside = true
+        focusRingType = .default
         self.target = target
         self.action = action
         setAccessibilityLabel(name)
@@ -78,25 +79,6 @@ private final class DeviceRow: NSButton {
         ])
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-    override func updateTrackingAreas() {
-        super.updateTrackingAreas()
-        if let old = hoverArea { removeTrackingArea(old) }
-        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
-        addTrackingArea(area)
-        hoverArea = area
-    }
-    override func mouseEntered(with event: NSEvent) { hovering = true; needsDisplay = true }
-    override func mouseExited(with event: NSEvent) { hovering = false; needsDisplay = true }
-    override func draw(_ dirtyRect: NSRect) {
-        if hovering || isHighlighted {
-            let color = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
-                ? NSColor.controlBackgroundColor
-                : NSColor.labelColor.withAlphaComponent(isHighlighted ? 0.13 : 0.07)
-            color.setFill()
-            NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill()
-        }
-    }
-    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
 }
 
 final class PrewarmPanel: NSViewController {
@@ -139,7 +121,7 @@ final class PrewarmPanel: NSViewController {
             content.topAnchor.constraint(equalTo: view.topAnchor), content.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
         let header = NSTextField(labelWithString: "Prewarm")
-        header.font = .systemFont(ofSize: 18, weight: .semibold)
+        header.font = .systemFont(ofSize: 13, weight: .semibold)
         let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")!, target: self, action: #selector(closePanel))
         close.isBordered = false
         close.contentTintColor = .secondaryLabelColor
@@ -175,7 +157,10 @@ final class PrewarmPanel: NSViewController {
         more.setAccessibilityLabel("More")
         more.toolTip = "About, microphone privacy, and Quit. Audio is never saved or sent."
         let sound = NSButton(title: "Sound Settings…", target: self, action: #selector(soundSettings))
-        sound.isBordered = false
+        sound.isBordered = true
+        sound.bezelStyle = .accessoryBarAction
+        sound.showsBorderOnlyWhileMouseInside = true
+        sound.focusRingType = .default
         sound.font = .systemFont(ofSize: 13)
         sound.alignment = .left
         let actions = NSStackView(views: [sound, NSView(), more])

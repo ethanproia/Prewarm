@@ -1,6 +1,6 @@
 # Prewarm
 
-Prewarm 0.1.1 (build 2), by Ethan Proia.
+Prewarm 0.1.1 (build 3), by Ethan Proia.
 
 A tiny macOS menu-bar utility that keeps a microphone's input stream active so dictation can begin without a cold-start gap. It immediately discards audio samples; it does not record, analyze, save, or transmit audio. No third-party dependencies or network calls.
 
