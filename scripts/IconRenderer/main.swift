@@ -12,13 +12,24 @@ func render(width: Int, height: Int, draw: (NSRect) -> Void) -> Data {
     NSGraphicsContext.restoreGraphicsState()
     return bitmap.representation(using: .png, properties: [:])!
 }
+let catalog = URL(fileURLWithPath: "\(root)/build/Prewarm.xcassets")
+let appIcon = catalog.appendingPathComponent("AppIcon.appiconset")
+try FileManager.default.createDirectory(at: appIcon, withIntermediateDirectories: true)
+let assetInfo: [String: Any] = ["info": ["author": "xcode", "version": 1]]
+try JSONSerialization.data(withJSONObject: assetInfo, options: [.prettyPrinted, .sortedKeys]).write(to: catalog.appendingPathComponent("Contents.json"))
+var iconEntries: [[String: String]] = []
 for size in [16, 32, 128, 256, 512] {
     for factor in [1, 2] {
         let pixels = size * factor
         let suffix = factor == 2 ? "@2x" : ""
-        try render(width: pixels, height: pixels) { IconArtwork.drawAppIcon(in: $0) }.write(to: URL(fileURLWithPath: "\(root)/assets/Prewarm.iconset/icon_\(size)x\(size)\(suffix).png"))
+        let filename = "icon_\(size)x\(size)\(suffix).png"
+        let png = render(width: pixels, height: pixels) { IconArtwork.drawAppIcon(in: $0) }
+        try png.write(to: URL(fileURLWithPath: "\(root)/assets/Prewarm.iconset/\(filename)"))
+        try png.write(to: appIcon.appendingPathComponent(filename))
+        iconEntries.append(["idiom": "mac", "size": "\(size)x\(size)", "scale": "\(factor)x", "filename": filename])
     }
 }
+try JSONSerialization.data(withJSONObject: ["images": iconEntries, "info": ["author": "xcode", "version": 1]], options: [.prettyPrinted, .sortedKeys]).write(to: appIcon.appendingPathComponent("Contents.json"))
 try render(width: 720, height: 420) { canvas in
     NSColor(srgbRed: 0.95, green: 0.945, blue: 0.93, alpha: 1).setFill()
     canvas.fill()

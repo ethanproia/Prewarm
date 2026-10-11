@@ -10,6 +10,9 @@ cp "$binary_dir/Prewarm" "$app_dir/Contents/MacOS/Prewarm"
 cp LICENSE "$app_dir/Contents/Resources/LICENSE"
 cp README.md "$app_dir/Contents/Resources/README.md"
 cp assets/Prewarm.icns "$app_dir/Contents/Resources/Prewarm.icns"
+xcrun actool build/Prewarm.xcassets --compile "$app_dir/Contents/Resources" \
+  --platform macosx --minimum-deployment-target 14.0 --app-icon AppIcon \
+  --output-partial-info-plist build/icon-info.plist --output-format human-readable-text
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -17,18 +20,18 @@ cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>com.ethan.Prewarm</string>
 <key>CFBundleName</key><string>Prewarm</string>
 <key>CFBundleDisplayName</key><string>Prewarm</string>
-<key>CFBundleIconFile</key><string>Prewarm.icns</string>
 <key>CFBundleExecutable</key><string>Prewarm</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.1.1</string>
-<key>CFBundleVersion</key><string>3</string>
+<key>CFBundleShortVersionString</key><string>0.1.2</string>
+<key>CFBundleVersion</key><string>4</string>
 <key>NSHumanReadableCopyright</key><string>Copyright © 2026 Ethan Proia. Based on macos-mic-keepwarm by Drew Burchfield (MIT).</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
-<key>NSMicrophoneUsageDescription</key><string>Prewarm keeps your selected microphone ready for dictation. Audio is immediately discarded, never saved or transmitted.</string>
+<key>NSMicrophoneUsageDescription</key><string>Prewarm keeps your selected microphone warm. Audio is immediately discarded, never saved or transmitted.</string>
 <key>NSHighResolutionCapable</key><true/>
 </dict></plist>
 PLIST
+/usr/libexec/PlistBuddy -c "Merge build/icon-info.plist" "$app_dir/Contents/Info.plist"
 codesign --force --sign "${PREWARM_SIGNING_IDENTITY:--}" --identifier com.ethan.Prewarm "$app_dir"
 codesign --verify --strict "$app_dir"
 plutil -lint "$app_dir/Contents/Info.plist"

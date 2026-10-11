@@ -1,8 +1,8 @@
 # Prewarm
 
-Prewarm 0.1.1 (build 3), by Ethan Proia.
+Prewarm 0.1.2 (build 4), by Ethan Proia.
 
-A tiny macOS menu-bar utility that keeps a microphone's input stream active so dictation can begin without a cold-start gap. It immediately discards audio samples; it does not record, analyze, save, or transmit audio. No third-party dependencies or network calls.
+A tiny macOS menu-bar utility that keeps your microphone warm by keeping its input stream active. It immediately discards audio samples; it does not record, analyze, save, or transmit audio. No third-party dependencies or network calls.
 
 Click the menu-bar icon and select **System default** in the Microphone list to follow the current macOS input, or choose a specific microphone. The list distinguishes known AirPods models, headsets, microphones, audio interfaces, virtual/aggregate devices and generic inputs using detected transport plus explicit product/model hints. Ambiguous USB devices use a connector, rather than being assumed interfaces. USB transport cannot identify the downstream XLR microphone. An explicit choice is pinned by device UID: reconnecting AirPods or changing the system default does not switch it. If the selected microphone disconnects, Prewarm waits for it instead of opening another mic. **Keep microphone ready** releases the input when switched off. Enabled state and the microphone selection persist across relaunches. First launch is off and opens a compact Settings window. The compact panel opens from the menu-bar icon or by reopening the app. Its native glass backdrop stays stationary; active controls use a warm copper accent. Sound Settings is directly accessible, and More contains About, privacy settings, and Quit. Both views use the same native controls.
 
@@ -26,7 +26,7 @@ Status metadata only (device names/UIDs, state and latest sample age) is written
 
 ## Verify with the actual microphone
 
-1. Close QuickTime's audio preview and other continuously capturing apps. Select Scarlett in Prewarm and in dictation, then enable warming. Confirm the menu reports keeping it warm; the metadata should show `running: true` with a recent `sampleAge`.
+1. Close QuickTime's audio preview and other continuously capturing apps. Select Scarlett in Prewarm and in dictation, then enable warming. Confirm the switch reports On; the metadata should show `running: true` with a recent `sampleAge`.
 2. Trigger Wispr and Willow and speak immediately. Compare opening audio against Prewarm off, using the same device and sample rate. Repeat at 48 and 192 kHz.
 3. Reconnect AirPods or change the system default while Scarlett is explicitly selected. Prewarm must remain on Scarlett. Selecting System default should follow macOS instead.
 4. Disconnect Scarlett: Prewarm must wait without opening another mic. Reconnect: warming must recover. Test sleep/wake, persisted selection after relaunch, and off releasing capture.

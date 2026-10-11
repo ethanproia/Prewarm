@@ -47,13 +47,13 @@ private final class DeviceBadge: NSView {
 
 private final class DeviceRow: NSButton {
     let uid: String
+    private var hovering = false
+    private var hoverArea: NSTrackingArea?
     init(name: String, uid: String, kind: String, selected: Bool, action: Selector, target: AnyObject) {
         self.uid = uid
         super.init(frame: .zero)
         title = ""
-        isBordered = true
-        bezelStyle = .accessoryBarAction
-        showsBorderOnlyWhileMouseInside = true
+        isBordered = false
         focusRingType = .default
         self.target = target
         self.action = action
@@ -79,6 +79,27 @@ private final class DeviceRow: NSButton {
         ])
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let old = hoverArea { removeTrackingArea(old) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect], owner: self)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+    override func mouseEntered(with event: NSEvent) { hovering = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hovering = false; needsDisplay = true }
+    override func draw(_ dirtyRect: NSRect) {
+        if hovering || isHighlighted {
+            let fill = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+                ? NSColor.controlBackgroundColor : NSColor.labelColor.withAlphaComponent(isHighlighted ? 0.13 : 0.07)
+            fill.setFill()
+            NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill()
+        }
+        super.draw(dirtyRect)
+    }
+    override var focusRingMaskBounds: NSRect { bounds }
+    override func drawFocusRingMask() { NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill() }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
 }
 
 final class PrewarmPanel: NSViewController {
@@ -93,6 +114,7 @@ final class PrewarmPanel: NSViewController {
     private lazy var warmingSwitch = NSHostingView(rootView: WarmingSwitch(model: warmingState))
     private let toggleState = NSTextField(labelWithString: "Off")
     private let deviceStack = NSStackView()
+    private var contentStack: NSStackView!
     private let status = NSTextField(labelWithString: "Off")
     private var lastRows: [String] = []
     private var enabled = false
@@ -100,35 +122,19 @@ final class PrewarmPanel: NSViewController {
 
     override func loadView() {
         let content = NSView()
-        if #available(macOS 26.0, *) {
-            let glass = NSGlassEffectView()
-            glass.style = .regular
-            glass.cornerRadius = 16
-            glass.contentView = content
-            // The container is a backdrop; interactive glass scales the whole panel on press.
-            view = glass
-        } else {
-            let material = NSVisualEffectView()
-            material.material = .popover
-            material.blendingMode = .behindWindow
-            material.state = .active
-            material.addSubview(content)
-            view = material
-        }
-        content.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: view.leadingAnchor), content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            content.topAnchor.constraint(equalTo: view.topAnchor), content.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
+        view = content
         let header = NSTextField(labelWithString: "Prewarm")
         header.font = .systemFont(ofSize: 13, weight: .semibold)
-        let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")!, target: self, action: #selector(closePanel))
+        header.textColor = .secondaryLabelColor
+        let closeImage = NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")!
+            .withSymbolConfiguration(.init(pointSize: 10, weight: .semibold))!
+        let close = NSButton(image: closeImage, target: self, action: #selector(closePanel))
         close.isBordered = false
         close.contentTintColor = .secondaryLabelColor
         let headerRow = NSStackView(views: [header, NSView(), close])
         headerRow.orientation = .horizontal
-        close.widthAnchor.constraint(equalToConstant: 18).isActive = true
-        close.heightAnchor.constraint(equalToConstant: 18).isActive = true
+        close.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        close.heightAnchor.constraint(equalToConstant: 28).isActive = true
         let label = NSTextField(labelWithString: "Keep microphone ready")
         label.font = .systemFont(ofSize: 13)
         warmingState.onChange = { [weak self] _ in self?.onToggle?() }
@@ -146,7 +152,10 @@ final class PrewarmPanel: NSViewController {
         ])
         let micHeader = NSTextField(labelWithString: "Microphone")
         micHeader.font = .systemFont(ofSize: 13, weight: .semibold)
+        micHeader.textColor = .secondaryLabelColor
         deviceStack.orientation = .vertical
+        deviceStack.distribution = .fill
+        deviceStack.setHuggingPriority(.required, for: .vertical)
         deviceStack.alignment = .leading
         deviceStack.spacing = 2
         status.font = .systemFont(ofSize: 11)
@@ -157,9 +166,7 @@ final class PrewarmPanel: NSViewController {
         more.setAccessibilityLabel("More")
         more.toolTip = "About, microphone privacy, and Quit. Audio is never saved or sent."
         let sound = NSButton(title: "Sound Settings…", target: self, action: #selector(soundSettings))
-        sound.isBordered = true
-        sound.bezelStyle = .accessoryBarAction
-        sound.showsBorderOnlyWhileMouseInside = true
+        sound.isBordered = false
         sound.focusRingType = .default
         sound.font = .systemFont(ofSize: 13)
         sound.alignment = .left
@@ -168,13 +175,18 @@ final class PrewarmPanel: NSViewController {
         actions.spacing = 8
         let footer = NSStackView(views: [status, actions])
         footer.orientation = .vertical
+        footer.distribution = .fill
+        footer.detachesHiddenViews = true
         footer.alignment = .leading
         footer.spacing = 6
         actions.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
-        more.widthAnchor.constraint(equalToConstant: 22).isActive = true
-        more.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        more.widthAnchor.constraint(equalToConstant: 28).isActive = true
+        more.heightAnchor.constraint(equalToConstant: 28).isActive = true
         let stack = NSStackView(views: [headerRow, row, separator(), micHeader, deviceStack, separator(), footer])
+        contentStack = stack
         stack.orientation = .vertical
+        stack.distribution = .fill
+        stack.setHuggingPriority(.required, for: .vertical)
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(12, after: headerRow)
@@ -212,7 +224,7 @@ final class PrewarmPanel: NSViewController {
         loadViewIfNeeded()
         self.enabled = enabled
         self.selection = selection
-        defer { view.layoutSubtreeIfNeeded(); preferredContentSize = NSSize(width: 300, height: view.fittingSize.height) }
+        defer { updatePreferredSize() }
         warmingState.isOn = enabled
         toggleState.stringValue = enabled ? "On" : "Off"
         status.toolTip = state?.message
@@ -231,6 +243,9 @@ final class PrewarmPanel: NSViewController {
         let fingerprint = choices.map { "\($0.0)|\($0.1)|\($0.2)|\($0.1 == selection)" }
         guard fingerprint != lastRows else { return }
         lastRows = fingerprint
+        var focusedUID: String?
+        if let focused = view.window?.firstResponder as? DeviceRow,
+           deviceStack.arrangedSubviews.contains(focused) { focusedUID = focused.uid }
         for row in deviceStack.arrangedSubviews { deviceStack.removeArrangedSubview(row); row.removeFromSuperview() }
         for choice in choices {
             let row = DeviceRow(name: choice.0, uid: choice.1, kind: choice.2, selected: choice.1 == selection, action: #selector(selectDevice(_:)), target: self)
@@ -238,8 +253,16 @@ final class PrewarmPanel: NSViewController {
             deviceStack.addArrangedSubview(row)
             row.widthAnchor.constraint(equalTo: deviceStack.widthAnchor).isActive = true
         }
+        if let uid = focusedUID,
+           let row = deviceStack.arrangedSubviews.compactMap({ $0 as? DeviceRow }).first(where: { $0.uid == uid }) {
+            view.window?.makeFirstResponder(row)
+        }
+    }
+    private func updatePreferredSize() {
+        contentStack.layoutSubtreeIfNeeded()
+        preferredContentSize = NSSize(width: 300, height: ceil(contentStack.fittingSize.height) + 28)
+        view.setFrameSize(preferredContentSize)
         view.layoutSubtreeIfNeeded()
-        preferredContentSize = NSSize(width: 300, height: view.fittingSize.height)
     }
     @objc private func closePanel() { onClose?() }
     @objc private func selectDevice(_ sender: DeviceRow) { onSelect?(sender.uid, sender.accessibilityLabel() ?? "Microphone", sender.identifier?.rawValue ?? "other") }
