@@ -1,11 +1,12 @@
 import AppKit
 import Foundation
 import PrewarmCore
+import CoreServices
 let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "13"])
+let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "14"])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
@@ -21,7 +22,7 @@ for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSApp
     print("About \(name): fit=\(size), inherited=\(controller.view.effectiveAppearance.name.rawValue); offscreen fixture, not live glass backdrop")
 }
 let devices = [Microphone(uid: "scarlett", name: "Scarlett Solo USB", transport: .usb, manufacturer: "Focusrite"), Microphone(uid: "airpods", name: "Ethan's AirPods Pro", transport: .bluetooth)]
-let state = CaptureState(processID: 0, updatedAt: Date(), message: "Warming", enabled: true, selection: "scarlett", targetUID: "scarlett", targetName: "Scarlett Solo USB", running: true, sampleAge: 0, available: devices)
+let state = CaptureState(processID: 0, updatedAt: Date(), message: "Warming", enabled: true, selection: "scarlett", targetUID: "scarlett", targetName: "Scarlett Solo USB", running: true, sampleAge: 0, available: devices, systemDefaultUID: "airpods")
 let panelContent = PrewarmPanel()
 panelContent.update(state: state, enabled: true, selection: "scarlett", missingName: "Scarlett Solo USB", missingKind: "interface")
 let host = PrewarmPanelHost(content: panelContent)
@@ -39,14 +40,14 @@ let children = descendants(panelContent.view)
 let deviceRow = children.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "System default" }!
 let soundButton = children.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "Sound Settings…" }!
 let moreButton = children.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "More" }!
-let section = children.compactMap { $0 as? NSTextField }.first { $0.stringValue == "Microphone" }!
+let section = children.compactMap { $0 as? NSTextField }.first { $0.stringValue == "Prewarm" }!
 let headerRect = section.convert(section.alignmentRect(forFrame: section.bounds), to: panelContent.view)
 let rowRect = deviceRow.convert(deviceRow.bounds, to: panelContent.view)
 let badge = deviceRow.subviews[0]
 precondition(deviceRow.bounds.height == 32 && badge.frame.size == NSSize(width: 26, height: 26))
 precondition(badge.frame.minX == 9 && badge.frame.minY == 3)
 precondition(badge.convert(badge.bounds, to: panelContent.view).minX == headerRect.minX)
-precondition(rowRect.minX == headerRect.minX - 9 && rowRect.maxX == headerRect.maxX + 9)
+precondition(rowRect.minX == headerRect.minX - 9 && rowRect.maxX == panelContent.view.bounds.maxX - headerRect.minX + 9)
 let hoverHit = panelContent.view.hitTest(deviceRow.convert(NSPoint(x: 1, y: 16), to: panelContent.view))
 precondition(hoverHit === deviceRow, "Expanded padding must be part of the actual native button hit area")
 let soundRect = soundButton.convert(soundButton.bounds, to: panelContent.view)
@@ -86,3 +87,15 @@ if #available(macOS 26.0, *), let glass = panelWindow.contentView as? NSGlassEff
     precondition(glass.cornerRadius == 0)
     print("NSPanel has one native glass host; inner radius=0, native window owns rounded boundary")
 }
+func launchEvent(id: AEEventID = AEEventID(kAEOpenApplication), reason: OSType?, eventClass: AEEventClass = AEEventClass(kCoreEventClass)) -> NSAppleEventDescriptor {
+    let event = NSAppleEventDescriptor(eventClass: eventClass, eventID: id, targetDescriptor: nil, returnID: AEReturnID(kAutoGenerateReturnID), transactionID: AETransactionID(kAnyTransactionID))
+    if let reason { event.setParam(NSAppleEventDescriptor(enumCode: reason), forKeyword: AEKeyword(keyAEPropData)) }
+    return event
+}
+precondition(LoginSettings.isLoginLaunch(launchEvent(reason: OSType(keyAELaunchedAsLogInItem))))
+precondition(!LoginSettings.isLoginLaunch(nil))
+precondition(!LoginSettings.isLoginLaunch(launchEvent(reason: nil)))
+precondition(!LoginSettings.isLoginLaunch(launchEvent(reason: OSType(keyAELaunchedAsServiceItem))))
+precondition(!LoginSettings.isLoginLaunch(launchEvent(id: AEEventID(kAEReopenApplication), reason: OSType(keyAELaunchedAsLogInItem))))
+precondition(!LoginSettings.isLoginLaunch(launchEvent(reason: OSType(keyAELaunchedAsLogInItem), eventClass: 0)))
+print("Login reason descriptor checks passed; no SM registration, defaults mutation or real login attempted.")

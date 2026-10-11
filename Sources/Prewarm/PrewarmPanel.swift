@@ -115,13 +115,10 @@ final class PrewarmPanel: NSViewController {
     var addLoginItems: ((NSMenu) -> Void)?
     private let warmingState = WarmingState()
     private lazy var warmingSwitch = NSHostingView(rootView: WarmingSwitch(model: warmingState))
-    private let toggleState = NSTextField(labelWithString: "Off")
     private let deviceStack = NSStackView()
     private var contentStack: NSStackView!
     private let status = NSTextField(labelWithString: "Off")
     private var lastRows: [String] = []
-    private var enabled = false
-    private var selection = ""
 
     override func loadView() {
         let content = NSView()
@@ -129,26 +126,16 @@ final class PrewarmPanel: NSViewController {
         let header = NSTextField(labelWithString: "Prewarm")
         header.font = .systemFont(ofSize: 13, weight: .semibold)
         header.textColor = .secondaryLabelColor
-        let headerRow = NSStackView(views: [header, NSView()])
-        headerRow.orientation = .horizontal
-        let label = NSTextField(labelWithString: "Keep microphone ready")
-        label.font = .systemFont(ofSize: 13)
         warmingState.onChange = { [weak self] _ in self?.onToggle?() }
         warmingSwitch.setAccessibilityLabel("Keep microphone ready")
-        toggleState.font = .systemFont(ofSize: 11)
-        toggleState.textColor = .secondaryLabelColor
-        let row = NSView()
-        for child in [label, toggleState, warmingSwitch] { child.translatesAutoresizingMaskIntoConstraints = false; row.addSubview(child) }
+        let headerRow = NSView()
+        for child in [header, warmingSwitch] { child.translatesAutoresizingMaskIntoConstraints = false; headerRow.addSubview(child) }
         NSLayoutConstraint.activate([
-            row.heightAnchor.constraint(equalToConstant: 28),
-            label.leadingAnchor.constraint(equalTo: row.leadingAnchor), label.centerYAnchor.constraint(equalTo: row.centerYAnchor),
-            toggleState.trailingAnchor.constraint(equalTo: warmingSwitch.leadingAnchor, constant: -7), toggleState.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            headerRow.heightAnchor.constraint(equalToConstant: 28),
+            header.leadingAnchor.constraint(equalTo: headerRow.leadingAnchor), header.centerYAnchor.constraint(equalTo: headerRow.centerYAnchor),
             warmingSwitch.widthAnchor.constraint(equalToConstant: 38), warmingSwitch.heightAnchor.constraint(equalToConstant: 24),
-            warmingSwitch.trailingAnchor.constraint(equalTo: row.trailingAnchor), warmingSwitch.centerYAnchor.constraint(equalTo: row.centerYAnchor)
+            warmingSwitch.trailingAnchor.constraint(equalTo: headerRow.trailingAnchor), warmingSwitch.centerYAnchor.constraint(equalTo: headerRow.centerYAnchor)
         ])
-        let micHeader = NSTextField(labelWithString: "Microphone")
-        micHeader.font = .systemFont(ofSize: 12, weight: .regular)
-        micHeader.textColor = .secondaryLabelColor
         deviceStack.orientation = .vertical
         deviceStack.distribution = .fill
         deviceStack.setHuggingPriority(.required, for: .vertical)
@@ -160,7 +147,7 @@ final class PrewarmPanel: NSViewController {
         more.isBordered = false
         more.contentTintColor = .secondaryLabelColor
         more.setAccessibilityLabel("More")
-        more.toolTip = "About, microphone privacy, and Quit. Audio is never saved or sent."
+        more.toolTip = "Login settings, About, microphone privacy, and Quit."
         let sound = HoverButton(frame: .zero)
         sound.title = ""
         sound.target = self
@@ -192,7 +179,7 @@ final class PrewarmPanel: NSViewController {
         more.widthAnchor.constraint(equalToConstant: 28).isActive = true
         more.heightAnchor.constraint(equalToConstant: 28).isActive = true
         let headerDivider = separator()
-        let stack = NSStackView(views: [headerRow, headerDivider, row, separator(), micHeader, deviceStack, separator(), footer])
+        let stack = NSStackView(views: [headerRow, headerDivider, deviceStack, separator(), footer])
         contentStack = stack
         stack.orientation = .vertical
         stack.distribution = .fill
@@ -201,13 +188,10 @@ final class PrewarmPanel: NSViewController {
         stack.spacing = 10
         stack.setCustomSpacing(12, after: headerRow)
         stack.setCustomSpacing(12, after: headerDivider)
-        stack.setCustomSpacing(4, after: micHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
-        for wide in [headerRow, row, micHeader] {
-            wide.translatesAutoresizingMaskIntoConstraints = false
-            wide.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true
-        }
+        headerRow.translatesAutoresizingMaskIntoConstraints = false
+        headerRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true
         deviceStack.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         footer.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         for divider in stack.arrangedSubviews.compactMap({ $0 as? NSBox }) { divider.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true }
@@ -233,11 +217,8 @@ final class PrewarmPanel: NSViewController {
     }
     func update(state: CaptureState?, enabled: Bool, selection: String, missingName: String, missingKind: String) {
         loadViewIfNeeded()
-        self.enabled = enabled
-        self.selection = selection
         defer { updatePreferredSize() }
         warmingState.isOn = enabled
-        toggleState.stringValue = enabled ? "On" : "Off"
         status.toolTip = state?.message
         status.setAccessibilityHelp(state?.message)
         if !enabled { status.stringValue = "Off" }
