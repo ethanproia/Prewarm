@@ -35,10 +35,15 @@ final class LoginSettings: NSObject {
     }
     @objc private func toggleOpen() {
         do {
-            if service.status == .enabled || service.status == .requiresApproval { try service.unregister() }
-            else { try service.register() }
-            if service.status == .requiresApproval {
+            let turningOn = service.status != .enabled && service.status != .requiresApproval
+            if turningOn { try service.register() }
+            else { try service.unregister() }
+            if turningOn && service.status == .requiresApproval {
                 showNotice(title: "Open at Login needs approval", message: "Enable Prewarm in macOS Login Items to finish turning this on.")
+            } else if turningOn && service.status != .enabled {
+                showNotice(title: "Open at Login isn't enabled", message: "macOS hasn't confirmed this login item. Check the installed Prewarm app in Login Items.")
+            } else if !turningOn && service.status != .notRegistered {
+                showNotice(title: "Open at Login hasn't turned off", message: "macOS still reports this login item. Check Prewarm in Login Items.")
             }
         } catch {
             showNotice(title: "Couldn't change Open at Login", message: "\(error.localizedDescription)\n\nUse the installed Prewarm app and check Login Items in System Settings.")
