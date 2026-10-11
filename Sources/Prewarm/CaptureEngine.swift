@@ -62,6 +62,9 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
         case kAudioDeviceTransportTypeBuiltIn: return .builtIn
         case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: return .bluetooth
         case kAudioDeviceTransportTypeUSB: return .usb
+        case kAudioDeviceTransportTypeVirtual: return .virtual
+        case kAudioDeviceTransportTypeAggregate: return .aggregate
+        case kAudioDeviceTransportTypeAVB: return .network
         default: return .other
         }
     }
@@ -78,7 +81,7 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
     }
     private func reconcile() {
         let inputs = devices()
-        let microphones = inputs.map { Microphone(uid: $0.uniqueID, name: $0.localizedName, transport: transport($0)) }
+        let microphones = inputs.map { Microphone(uid: $0.uniqueID, name: $0.localizedName, transport: transport($0), modelID: $0.modelID, manufacturer: $0.manufacturer) }
         defer { publish(microphones) }
         guard enabled, !sleeping else {
             stop()

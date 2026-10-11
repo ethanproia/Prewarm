@@ -1,0 +1,8 @@
+Native mic 1x canvas22pt image(17.0, 20.0) alphaBounds=(4,2)–(16,19) alphaMass=73.0
+Native controls 1x canvas22pt image(20.0, 17.0) alphaBounds=(3,4)–(18,18) alphaMass=76.4
+Prewarm on 1x canvas22pt image(18.0, 20.0) alphaBounds=(4,3)–(17,19) alphaMass=81.8
+Prewarm off 1x canvas22pt image(18.0, 20.0) alphaBounds=(4,2)–(17,19) alphaMass=72.0
+Native mic 2x canvas22pt image(17.0, 20.0) alphaBounds=(9,4)–(34,39) alphaMass=76.2
+Native controls 2x canvas22pt image(20.0, 17.0) alphaBounds=(6,7)–(37,36) alphaMass=79.1
+Prewarm on 2x canvas22pt image(18.0, 20.0) alphaBounds=(9,6)–(34,39) alphaMass=82.3
+Prewarm off 2x canvas22pt image(18.0, 20.0) alphaBounds=(9,5)–(34,39) alphaMass=72.9

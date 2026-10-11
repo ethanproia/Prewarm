@@ -51,34 +51,20 @@ enum IconArtwork {
         image.accessibilityDescription = active ? "Prewarm — microphone warm" : "Prewarm — off"
         return image
     }
-    static func deviceImage(transport: String) -> NSImage {
-        if transport == "usb" {
-            let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
-                NSColor.black.setStroke()
-                let panel = NSBezierPath(roundedRect: NSRect(x: 1, y: 4, width: 16, height: 10), xRadius: 2, yRadius: 2)
-                panel.lineWidth = 1.2
-                panel.stroke()
-                for x: CGFloat in [5, 10] {
-                    let port = NSBezierPath(ovalIn: NSRect(x: x - 1.7, y: 7.3, width: 3.4, height: 3.4))
-                    port.lineWidth = 1.1
-                    port.stroke()
-                }
-                let level = NSBezierPath()
-                level.move(to: NSPoint(x: 14, y: 7))
-                level.line(to: NSPoint(x: 14, y: 11))
-                level.lineWidth = 1.3
-                level.lineCapStyle = .round
-                level.stroke()
-                return true
-            }
-            image.isTemplate = true
-            image.accessibilityDescription = "USB audio input"
-            return image
-        }
+    static func deviceImage(kind: String) -> NSImage {
         let symbol: String
         let description: String
-        switch transport {
+        switch kind {
+        case "interface": symbol = "hifireceiver"; description = "Audio interface"
+        case "usb": symbol = "cable.connector"; description = "USB audio input"
+        case "microphone": symbol = "mic"; description = "Microphone"
+        case "virtual": symbol = "waveform"; description = "Virtual audio input"
+        case "aggregate": symbol = "square.stack"; description = "Aggregate audio input"
         case "builtIn": symbol = "mic"; description = "Built-in microphone"
+        case "airpodspro": symbol = "airpodspro"; description = "AirPods Pro audio input"
+        case "airpodsmax": symbol = "airpodsmax"; description = "AirPods Max audio input"
+        case "airpods": symbol = "airpods"; description = "AirPods audio input"
+        case "headphones": symbol = "headphones"; description = "Headphones audio input"
         case "bluetooth": symbol = "headphones"; description = "Bluetooth audio input"
         case "system": symbol = "arrow.triangle.branch"; description = "System default microphone"
         default: symbol = "waveform"; description = "Audio input"

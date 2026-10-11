@@ -40,11 +40,11 @@ try render(width: 720, height: 420) { canvas in
     }
 }.write(to: URL(fileURLWithPath: "\(root)/assets/icon-review.png"))
 
-try render(width: 540, height: 180) { canvas in
+try render(width: 750, height: 180) { canvas in
     NSColor.white.setFill(); canvas.fill()
-    for (i, kind) in ["system", "builtIn", "bluetooth", "usb", "other"].enumerated() {
+    for (i, kind) in ["system", "builtIn", "bluetooth", "airpods", "airpodspro", "usb", "other"].enumerated() {
         let x = CGFloat(26 + i * 105)
-        let icon = IconArtwork.deviceImage(transport: kind)
+        let icon = IconArtwork.deviceImage(kind: kind)
         icon.draw(in: NSRect(x: x + 22, y: 102, width: 18, height: 18))
         icon.draw(in: NSRect(x: x + 8, y: 43, width: 42, height: 42))
         (kind as NSString).draw(at: NSPoint(x: x, y: 18), withAttributes: [.font: NSFont.systemFont(ofSize: 11), .foregroundColor: NSColor.black])
