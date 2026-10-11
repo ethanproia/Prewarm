@@ -1,12 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+./scripts/render-icons.sh
 swift build -c release
 binary_dir="$(swift build -c release --show-bin-path)"
 app_dir="$PWD/build/Prewarm.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$binary_dir/Prewarm" "$app_dir/Contents/MacOS/Prewarm"
 cp LICENSE "$app_dir/Contents/Resources/LICENSE"
+cp assets/Prewarm.icns "$app_dir/Contents/Resources/Prewarm.icns"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -14,6 +16,7 @@ cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>com.ethan.Prewarm</string>
 <key>CFBundleName</key><string>Prewarm</string>
 <key>CFBundleDisplayName</key><string>Prewarm</string>
+<key>CFBundleIconFile</key><string>Prewarm.icns</string>
 <key>CFBundleExecutable</key><string>Prewarm</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>

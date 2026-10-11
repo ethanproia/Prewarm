@@ -24,12 +24,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         NSApp.setActivationPolicy(.accessory)
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "mic.slash", accessibilityDescription: "Prewarm")
+        statusItem.button?.image = IconArtwork.menuImage(active: false)
         statusItem.button?.toolTip = "Prewarm — Off"
         engine.onState = { [weak self] state in
             guard let self else { return }
             self.state = state
-            self.statusItem.button?.image = NSImage(systemSymbolName: state.running ? "mic.fill" : "mic.slash", accessibilityDescription: "Prewarm")
+            self.statusItem.button?.image = IconArtwork.menuImage(active: state.running)
             self.statusItem.button?.toolTip = "Prewarm — \(state.message)"
             self.buildMenu()
             self.refreshSettings()

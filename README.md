@@ -31,6 +31,10 @@ Status metadata only (device names/UIDs, state and latest sample age) is written
 
 Automated policy tests cover explicit selection through default changes, no fallback during disconnection, reconnect recovery, System default following, failed-start retry and stale-stream recovery. They do not establish hardware latency or microphone permission behavior.
 
+## Icon
+
+Original deterministic vector artwork combines a flame-shaped microphone with its cradle. The menu-bar mark is an AppKit template, with filled and outlined states for on/off; the app icon uses the same mark on a warm amber/orange tile. Vector source: `Sources/Prewarm/IconArtwork.swift`; `./scripts/render-icons.sh` regenerates all PNG sizes, `assets/Prewarm.icns`, and the light/dark size review sheet. No external icon artwork or font glyphs are used.
+
 ## Provenance
 
 Local derivative of [Drew Burchfield's macos-mic-keepwarm](https://github.com/drewburchfield/macos-mic-keepwarm) at upstream commit `20aa116e03dc2ae4b47a1d15a6134507947c9093`, imported from its public GitHub archive. Original MIT license and copyright are preserved in `LICENSE`. The original CLI and installer are retained under `upstream/` for provenance, outside the build targets. The app rewrites lifecycle and UI around that capture/discard approach. `APPLE_FEEDBACK.md` is an upstream hypothesis, not a confirmed root cause for this setup.
