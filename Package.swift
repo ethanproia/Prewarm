@@ -1,17 +1,7 @@
 // swift-tools-version:5.9
 import PackageDescription
-
-let package = Package(
-    name: "mic-warm",
-    platforms: [.macOS(.v13)],
-    targets: [
-        .executableTarget(
-            name: "mic-warm",
-            path: "Sources/MicWarm",
-            linkerSettings: [
-                .linkedFramework("AVFoundation"),
-                .linkedFramework("CoreAudio"),
-            ]
-        )
-    ]
-)
+let package = Package(name: "Prewarm", platforms: [.macOS(.v14)], products: [.executable(name: "Prewarm", targets: ["Prewarm"])], targets: [
+    .target(name: "PrewarmCore"),
+    .executableTarget(name: "Prewarm", dependencies: ["PrewarmCore"], linkerSettings: [.linkedFramework("AppKit"), .linkedFramework("AVFoundation"), .linkedFramework("CoreAudio")]),
+    .testTarget(name: "PrewarmCoreTests", dependencies: ["PrewarmCore"])
+])

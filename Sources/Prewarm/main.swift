@@ -1,0 +1,135 @@
+import AppKit
+import AVFoundation
+import PrewarmCore
+
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    private var statusItem: NSStatusItem!
+    private let engine = CaptureEngine()
+    private var state: CaptureState?
+    private let defaults = UserDefaults.standard
+    private var enabled: Bool { defaults.bool(forKey: "enabled") }
+    private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
+    private var observers: [NSObjectProtocol] = []
+    private var menuOpen = false
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
+        guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) else {
+            NSApp.terminate(nil)
+            return
+        }
+        NSApp.setActivationPolicy(.accessory)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.image = NSImage(systemSymbolName: "mic.slash", accessibilityDescription: "Prewarm")
+        statusItem.button?.toolTip = "Prewarm — Off"
+        engine.onState = { [weak self] state in
+            guard let self else { return }
+            self.state = state
+            self.statusItem.button?.image = NSImage(systemSymbolName: state.running ? "mic.fill" : "mic.slash", accessibilityDescription: "Prewarm")
+            self.statusItem.button?.toolTip = "Prewarm — \(state.message)"
+            self.buildMenu()
+            self.writeDiagnostics(state)
+        }
+        buildMenu()
+        let center = NSWorkspace.shared.notificationCenter
+        observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(true) })
+        observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(false) })
+        apply()
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        writeDiagnostics(CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: "Not running", enabled: enabled, selection: selection, targetUID: nil, targetName: nil, running: false, sampleAge: nil, available: state?.available ?? []))
+    }
+    private func item(_ title: String, action: Selector? = nil) -> NSMenuItem {
+        let item = NSMenuItem(title: title, action: action, keyEquivalent: "")
+        item.target = self
+        return item
+    }
+    private func buildMenu() {
+        // An open menu must remain stable while the user makes a selection.
+        if menuOpen { return }
+        let menu = NSMenu()
+        menu.delegate = self
+        let title = item("Prewarm")
+        title.isEnabled = false
+        menu.addItem(title)
+        let status = item(state?.message ?? "Off")
+        status.isEnabled = false
+        menu.addItem(status)
+        menu.addItem(.separator())
+        let toggle = item("Keep microphone warm", action: #selector(toggleEnabled))
+        toggle.state = enabled ? .on : .off
+        menu.addItem(toggle)
+        let microphone = item("Microphone")
+        let submenu = NSMenu()
+        let system = item("System default", action: #selector(selectMicrophone(_:)))
+        system.representedObject = ""
+        system.state = selection.isEmpty ? .on : .off
+        submenu.addItem(system)
+        submenu.addItem(.separator())
+        for device in (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
+            let choice = item(device.name, action: #selector(selectMicrophone(_:)))
+            choice.representedObject = device.uid
+            choice.state = selection == device.uid ? .on : .off
+            submenu.addItem(choice)
+        }
+        if !selection.isEmpty && !(state?.available ?? []).contains(where: { $0.uid == selection }) {
+            let missing = item("\(defaults.string(forKey: "microphoneName") ?? "Selected microphone") (disconnected)")
+            missing.state = .on
+            missing.isEnabled = false
+            submenu.addItem(missing)
+        }
+        microphone.submenu = submenu
+        menu.addItem(microphone)
+        menu.addItem(.separator())
+        let privacy = item("Audio is discarded. Nothing is recorded.")
+        privacy.isEnabled = false
+        menu.addItem(privacy)
+        menu.addItem(item("Microphone privacy settings…", action: #selector(openPrivacy)))
+        menu.addItem(item("About Prewarm…", action: #selector(about)))
+        menu.addItem(item("Quit Prewarm", action: #selector(quit)))
+        statusItem.menu = menu
+    }
+    func menuWillOpen(_ menu: NSMenu) { menuOpen = true }
+    func menuDidClose(_ menu: NSMenu) { menuOpen = false; DispatchQueue.main.async { self.buildMenu() } }
+    @objc private func toggleEnabled() {
+        defaults.set(!enabled, forKey: "enabled")
+        apply()
+        buildMenu()
+    }
+    @objc private func selectMicrophone(_ sender: NSMenuItem) {
+        guard let uid = sender.representedObject as? String else { return }
+        defaults.set(uid, forKey: "microphoneUID")
+        defaults.set(sender.title, forKey: "microphoneName")
+        apply()
+        buildMenu()
+    }
+    private func apply() {
+        if enabled && AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
+            AVCaptureDevice.requestAccess(for: .audio) { [weak self] _ in
+                DispatchQueue.main.async { self?.apply() }
+            }
+        }
+        engine.configure(enabled: enabled, selection: selection)
+    }
+    @objc private func openPrivacy() {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
+    }
+    @objc private func about() {
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        alert.messageText = "Prewarm"
+        alert.informativeText = "Keeps your chosen microphone ready for dictation. Audio is immediately discarded and never saved or sent.\n\nVersion 0.1.0\nBased on macos-mic-keepwarm by Drew Burchfield (MIT)."
+        alert.runModal()
+    }
+    @objc private func quit() { NSApp.terminate(nil) }
+    private func writeDiagnostics(_ state: CaptureState) {
+        // Metadata only, useful for verifying capture and reconnect without audio logging.
+        let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("com.ethan.Prewarm")
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let data = try? JSONEncoder().encode(state) { try? data.write(to: directory.appendingPathComponent("status.json"), options: .atomic) }
+    }
+}
+let app = NSApplication.shared
+let delegate = AppDelegate()
+app.delegate = delegate
+app.run()
