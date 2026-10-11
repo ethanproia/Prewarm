@@ -1,6 +1,6 @@
 # Prewarm
 
-Prewarm 0.1.2 (build 8), by Ethan Proia.
+Prewarm 0.1.2 (build 9), by Ethan Proia.
 
 A tiny macOS menu-bar utility that keeps your microphone warm by keeping its input stream active. It immediately discards audio samples; it does not record, analyze, save, or transmit audio. No third-party dependencies or network calls.
 

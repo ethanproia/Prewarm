@@ -19,7 +19,6 @@ private struct AboutView: SwiftUI.View {
     let version: String
     let build: String
     let openDocs: () -> Void
-    let openUpstream: () -> Void
 
     var body: some SwiftUI.View {
         VStack(spacing: 10) {
@@ -30,12 +29,16 @@ private struct AboutView: SwiftUI.View {
             Text("Version \(version) (\(build))").font(.system(size: 11)).foregroundStyle(.secondary)
             Text("By Ethan Proia").font(.system(size: 12))
             actions.padding(.vertical, 6)
-            Text("Audio is never saved or sent.").font(.system(size: 11)).foregroundStyle(.secondary)
-            Text("Based on macos-mic-keepwarm\nby Drew Burchfield · MIT license")
-                .font(.system(size: 10)).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            Button("Upstream project", action: openUpstream).buttonStyle(.link).font(.system(size: 11))
-                .help("Drew Burchfield's original macos-mic-keepwarm project")
+            VStack(spacing: 2) {
+                HStack(spacing: 0) {
+                    Text("Based on ").foregroundStyle(.secondary)
+                    Link("macos-mic-keepwarm", destination: URL(string: "https://github.com/drewburchfield/macos-mic-keepwarm")!)
+                        .buttonStyle(.link)
+                        .help("Drew Burchfield's original macos-mic-keepwarm project")
+                }
+                Text("by Drew Burchfield · MIT license").foregroundStyle(.secondary)
+            }
+            .font(.system(size: 10))
         }
         .padding(.horizontal, 24)
         .padding(.top, 36)
@@ -73,8 +76,7 @@ final class AboutController: NSViewController {
             icon: NSApp.applicationIconImage,
             version: info["CFBundleShortVersionString"] as? String ?? "Unknown",
             build: info["CFBundleVersion"] as? String ?? "Unknown",
-            openDocs: { if let url = Bundle.main.url(forResource: "README", withExtension: "md") { NSWorkspace.shared.open(url) } },
-            openUpstream: { NSWorkspace.shared.open(URL(string: "https://github.com/drewburchfield/macos-mic-keepwarm")!) }
+            openDocs: { if let url = Bundle.main.url(forResource: "README", withExtension: "md") { NSWorkspace.shared.open(url) } }
         ))
         hosting.sizingOptions = .intrinsicContentSize
         hosting.safeAreaRegions = []
