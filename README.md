@@ -16,7 +16,7 @@ open build/Prewarm.app
 
 For a permanent local installation, quit Prewarm, copy `build/Prewarm.app` to `~/Applications/Prewarm.app`, and launch that copy. Enable warming and allow the macOS microphone permission prompt. macOS displays its microphone privacy indicator while warming. Select the Scarlett explicitly before enabling if the system default could be AirPods: keeping a Bluetooth mic active can affect its audio mode and battery.
 
-The local build is ad-hoc signed because no signing identity is available. A new build may require microphone permission again. `PREWARM_SIGNING_IDENTITY` can supply a real signing identity; distribution, notarization, remote publication, and Homebrew submission are deferred.
+The local build is ad-hoc signed because no signing identity is available. The current ad-hoc designated requirement is tied to the executable code-directory hash (verified with `codesign -d -r-`). Changing and re-signing the app changes that identity, so macOS may ask for microphone permission again. The stable bundle ID alone does not prevent this. No permission bypass or TCC modification is attempted. `PREWARM_SIGNING_IDENTITY` can supply a real signing identity; distribution, notarization, remote publication, and Homebrew submission are deferred. A privately maintained local self-signed identity could give development builds a certificate-based identity, but creating/importing its certificate and private key or changing trust is a separate Keychain/security operation; this project has not done so. It would not substitute for Developer ID signing or notarization for distribution.
 
 ## Recovery and privacy
 
