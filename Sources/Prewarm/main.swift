@@ -7,7 +7,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let engine = CaptureEngine()
     private var state: CaptureState?
     private let defaults = UserDefaults.standard
-    private var enabled: Bool { defaults.bool(forKey: "enabled") }
+    private var enabled = false
+    private let loginSettings = LoginSettings()
     private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
     private var observers: [NSObjectProtocol] = []
     private var aboutWindow: NSWindow?
@@ -17,6 +18,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) else { NSApp.terminate(nil); return }
+        let loginLaunch = LoginSettings.isLoginLaunch(NSAppleEventManager.shared().currentAppleEvent)
+        enabled = StartupPolicy.initialEnabled(isLoginLaunch: loginLaunch, enableAtLogin: loginSettings.enableAtLogin, savedEnabled: defaults.bool(forKey: "enabled"))
         NSApp.setActivationPolicy(.accessory)
         if let iconURL = Bundle.main.url(forResource: "Prewarm", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) { NSApp.applicationIconImage = icon }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -39,7 +42,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(false) })
         apply()
         refreshPanel()
-        if !defaults.bool(forKey: "hasShownSettings") {
+        if !loginLaunch && !defaults.bool(forKey: "hasShownSettings") {
             defaults.set(true, forKey: "hasShownSettings")
             DispatchQueue.main.async { [weak self] in self?.showPanel() }
         }
@@ -55,6 +58,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         controls.onPrivacy = { [weak self] in self?.panelHost.dismiss(); self?.openPrivacy() }
         controls.onQuit = { NSApp.terminate(nil) }
+        controls.addLoginItems = { [weak self] menu in self?.loginSettings.addItems(to: menu) }
         return controls
     }
     private func refreshPanel() {
@@ -66,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func togglePanel() { if panelHost.isShown { panelHost.dismiss() } else { showPanel() } }
     private func showPanel() { guard let button = statusItem.button else { return }; refreshPanel(); panelHost.show(below: button) }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showPanel(); return true }
-    private func toggleEnabled() { defaults.set(!enabled, forKey: "enabled"); apply(); refreshPanel() }
+    private func toggleEnabled() { enabled.toggle(); defaults.set(enabled, forKey: "enabled"); apply(); refreshPanel() }
     private func selectMicrophone(uid: String, name: String, kind: String) {
         defaults.set(uid, forKey: "microphoneUID")
         defaults.set(name, forKey: "microphoneName")

@@ -112,6 +112,7 @@ final class PrewarmPanel: NSViewController {
     var onQuit: (() -> Void)?
     var onSoundSettings: (() -> Void)?
     var onPrivacy: (() -> Void)?
+    var addLoginItems: ((NSMenu) -> Void)?
     private let warmingState = WarmingState()
     private lazy var warmingSwitch = NSHostingView(rootView: WarmingSwitch(model: warmingState))
     private let toggleState = NSTextField(labelWithString: "Off")
@@ -221,6 +222,8 @@ final class PrewarmPanel: NSViewController {
     private func separator() -> NSBox { let box = NSBox(); box.boxType = .separator; return box }
     @objc private func showMore(_ sender: NSButton) {
         let menu = NSMenu()
+        menu.autoenablesItems = false
+        if let addLoginItems { addLoginItems(menu); menu.addItem(.separator()) }
         for (title, selector) in [("About Prewarm…", #selector(about)), ("Microphone Privacy…", #selector(privacySettings)), ("Quit Prewarm", #selector(quitApp))] {
             let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
             item.target = self
