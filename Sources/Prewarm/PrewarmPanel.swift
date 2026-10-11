@@ -146,7 +146,7 @@ final class PrewarmPanel: NSViewController {
             warmingSwitch.trailingAnchor.constraint(equalTo: row.trailingAnchor), warmingSwitch.centerYAnchor.constraint(equalTo: row.centerYAnchor)
         ])
         let micHeader = NSTextField(labelWithString: "Microphone")
-        micHeader.font = .systemFont(ofSize: 13, weight: .semibold)
+        micHeader.font = .systemFont(ofSize: 12, weight: .regular)
         micHeader.textColor = .secondaryLabelColor
         deviceStack.orientation = .vertical
         deviceStack.distribution = .fill
@@ -198,8 +198,8 @@ final class PrewarmPanel: NSViewController {
         stack.setHuggingPriority(.required, for: .vertical)
         stack.alignment = .centerX
         stack.spacing = 10
-        stack.setCustomSpacing(8, after: headerRow)
-        stack.setCustomSpacing(8, after: headerDivider)
+        stack.setCustomSpacing(12, after: headerRow)
+        stack.setCustomSpacing(12, after: headerDivider)
         stack.setCustomSpacing(4, after: micHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)

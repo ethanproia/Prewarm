@@ -2,9 +2,11 @@ import AppKit
 
 private final class FloatingPanel: NSPanel {
     var onDismiss: (() -> Void)?
+    var onHidden: (() -> Void)?
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
     override func cancelOperation(_ sender: Any?) { onDismiss?() }
+    override func orderOut(_ sender: Any?) { super.orderOut(sender); onHidden?() }
 }
 
 /// One native panel/window frame and one supported material, without popover chrome.
@@ -51,18 +53,25 @@ final class PrewarmPanelHost {
         ])
         panel.contentView = material
         panel.onDismiss = { [weak self] in self?.dismiss() }
+        panel.onHidden = { [weak self] in self?.clearPresentation() }
     }
     func refreshSize() {
         // Full-size content occupies the native frame; do not add title-bar height.
         panel.setFrame(NSRect(origin: panel.frame.origin, size: content.preferredContentSize), display: false)
         panel.contentView?.layoutSubtreeIfNeeded()
-        if isShown, let anchor { position(below: anchor) }
+        if isShown, let anchor { position(below: anchor); anchor.highlight(true) }
     }
     func show(below button: NSStatusBarButton) {
         anchor = button
         refreshSize()
         position(below: button)
         panel.makeKeyAndOrderFront(nil)
+        button.highlight(true)
+        // Status-button mouse tracking can clear highlighting after its action returns.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isShown else { return }
+            self.anchor?.highlight(true)
+        }
         installMonitors()
     }
     private func position(below button: NSStatusBarButton) {
@@ -71,11 +80,15 @@ final class PrewarmPanelHost {
         let visible = screen.visibleFrame
         let size = panel.frame.size
         let x = min(max(rect.midX - size.width / 2, visible.minX + 8), visible.maxX - size.width - 8)
-        let y = max(visible.minY + 8, min(rect.minY - 6, visible.maxY - 6) - size.height)
+        let y = max(visible.minY + 8, min(window.frame.minY, visible.maxY) - 6 - size.height)
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
     func dismiss() {
         panel.orderOut(nil)
+    }
+    private func clearPresentation() {
+        anchor?.highlight(false)
+        anchor = nil
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
         globalMonitor = nil
@@ -94,6 +107,7 @@ final class PrewarmPanelHost {
         }
     }
     deinit {
+        anchor?.highlight(false)
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
     }
