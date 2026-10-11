@@ -11,6 +11,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
     private var observers: [NSObjectProtocol] = []
     private var menuOpen = false
+    private var settingsWindow: NSWindow?
+    private var warmingCheckbox: NSButton?
+    private var microphonePopup: NSPopUpButton?
+    private var statusLabel: NSTextField?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
@@ -28,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             self.statusItem.button?.image = NSImage(systemSymbolName: state.running ? "mic.fill" : "mic.slash", accessibilityDescription: "Prewarm")
             self.statusItem.button?.toolTip = "Prewarm — \(state.message)"
             self.buildMenu()
+            self.refreshSettings()
             self.writeDiagnostics(state)
         }
         buildMenu()
@@ -35,6 +40,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(true) })
         observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(false) })
         apply()
+        if !defaults.bool(forKey: "hasShownSettings") {
+            defaults.set(true, forKey: "hasShownSettings")
+            showSettings()
+        }
+    }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        showSettings()
+        return true
     }
     func applicationWillTerminate(_ notification: Notification) {
         writeDiagnostics(CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: "Not running", enabled: enabled, selection: selection, targetUID: nil, targetName: nil, running: false, sampleAge: nil, available: state?.available ?? []))
@@ -84,17 +97,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let privacy = item("Audio is discarded. Nothing is recorded.")
         privacy.isEnabled = false
         menu.addItem(privacy)
+        menu.addItem(item("Settings…", action: #selector(showSettings)))
         menu.addItem(item("Microphone privacy settings…", action: #selector(openPrivacy)))
         menu.addItem(item("About Prewarm…", action: #selector(about)))
         menu.addItem(item("Quit Prewarm", action: #selector(quit)))
         statusItem.menu = menu
     }
     func menuWillOpen(_ menu: NSMenu) { menuOpen = true }
-    func menuDidClose(_ menu: NSMenu) { menuOpen = false; DispatchQueue.main.async { self.buildMenu() } }
+    func menuDidClose(_ menu: NSMenu) { menuOpen = false; DispatchQueue.main.async { self.buildMenu(); self.refreshSettings() } }
     @objc private func toggleEnabled() {
         defaults.set(!enabled, forKey: "enabled")
         apply()
         buildMenu()
+        refreshSettings()
     }
     @objc private func selectMicrophone(_ sender: NSMenuItem) {
         guard let uid = sender.representedObject as? String else { return }
@@ -102,6 +117,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         defaults.set(sender.title, forKey: "microphoneName")
         apply()
         buildMenu()
+        refreshSettings()
     }
     private func apply() {
         if enabled && AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
@@ -110,6 +126,72 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             }
         }
         engine.configure(enabled: enabled, selection: selection)
+    }
+    @objc private func showSettings() {
+        if settingsWindow == nil {
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 230), styleMask: [.titled, .closable], backing: .buffered, defer: false)
+            window.title = "Prewarm Settings"
+            window.isReleasedWhenClosed = false
+            let title = NSTextField(labelWithString: "Keep your microphone ready")
+            title.font = .systemFont(ofSize: 17, weight: .semibold)
+            let checkbox = NSButton(checkboxWithTitle: "Keep microphone warm", target: self, action: #selector(toggleEnabled))
+            warmingCheckbox = checkbox
+            let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+            popup.menu?.delegate = self
+            popup.target = self
+            popup.action = #selector(selectPopupMicrophone(_:))
+            microphonePopup = popup
+            let micRow = NSStackView(views: [NSTextField(labelWithString: "Microphone"), popup])
+            micRow.orientation = .horizontal
+            micRow.spacing = 12
+            let status = NSTextField(wrappingLabelWithString: "Off")
+            status.textColor = .secondaryLabelColor
+            statusLabel = status
+            let privacy = NSTextField(wrappingLabelWithString: "Audio is immediately discarded. Nothing is recorded or sent.")
+            privacy.font = .systemFont(ofSize: 11)
+            privacy.textColor = .secondaryLabelColor
+            let stack = NSStackView(views: [title, checkbox, micRow, status, privacy])
+            stack.orientation = .vertical
+            stack.alignment = .leading
+            stack.spacing = 16
+            stack.translatesAutoresizingMaskIntoConstraints = false
+            window.contentView!.addSubview(stack)
+            NSLayoutConstraint.activate([
+                stack.leadingAnchor.constraint(equalTo: window.contentView!.leadingAnchor, constant: 24),
+                stack.trailingAnchor.constraint(equalTo: window.contentView!.trailingAnchor, constant: -24),
+                stack.topAnchor.constraint(equalTo: window.contentView!.topAnchor, constant: 24),
+                popup.widthAnchor.constraint(equalToConstant: 260),
+                privacy.widthAnchor.constraint(equalTo: stack.widthAnchor),
+                status.widthAnchor.constraint(equalTo: stack.widthAnchor)
+            ])
+            window.center()
+            settingsWindow = window
+        }
+        refreshSettings()
+        settingsWindow?.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+    private func refreshSettings() {
+        warmingCheckbox?.state = enabled ? .on : .off
+        statusLabel?.stringValue = state?.message ?? "Off"
+        guard let popup = microphonePopup else { return }
+        // Leave a popup's visible menu stable while tracking a click.
+        if menuOpen { return }
+        popup.removeAllItems()
+        popup.addItem(withTitle: "System default")
+        popup.lastItem?.representedObject = ""
+        for device in (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
+            popup.addItem(withTitle: device.name)
+            popup.lastItem?.representedObject = device.uid
+        }
+        if !selection.isEmpty && !(state?.available ?? []).contains(where: { $0.uid == selection }) {
+            popup.addItem(withTitle: "\(defaults.string(forKey: "microphoneName") ?? "Selected microphone") (disconnected)")
+            popup.lastItem?.representedObject = selection
+        }
+        if let selected = popup.itemArray.first(where: { ($0.representedObject as? String) == selection }) { popup.select(selected) }
+    }
+    @objc private func selectPopupMicrophone(_ sender: NSPopUpButton) {
+        if let selected = sender.selectedItem { selectMicrophone(selected) }
     }
     @objc private func openPrivacy() {
         NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!)
