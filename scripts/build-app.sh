@@ -8,6 +8,7 @@ app_dir="$PWD/build/Prewarm.app"
 mkdir -p "$app_dir/Contents/MacOS" "$app_dir/Contents/Resources"
 cp "$binary_dir/Prewarm" "$app_dir/Contents/MacOS/Prewarm"
 cp LICENSE "$app_dir/Contents/Resources/LICENSE"
+cp README.md "$app_dir/Contents/Resources/README.md"
 cp assets/Prewarm.icns "$app_dir/Contents/Resources/Prewarm.icns"
 cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -19,8 +20,9 @@ cat > "$app_dir/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIconFile</key><string>Prewarm.icns</string>
 <key>CFBundleExecutable</key><string>Prewarm</string>
 <key>CFBundlePackageType</key><string>APPL</string>
-<key>CFBundleShortVersionString</key><string>0.1.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>0.1.1</string>
+<key>CFBundleVersion</key><string>2</string>
+<key>NSHumanReadableCopyright</key><string>Copyright © 2026 Ethan Proia. Based on macos-mic-keepwarm by Drew Burchfield (MIT).</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>LSUIElement</key><true/>
 <key>NSMicrophoneUsageDescription</key><string>Prewarm keeps your selected microphone ready for dictation. Audio is immediately discarded, never saved or transmitted.</string>

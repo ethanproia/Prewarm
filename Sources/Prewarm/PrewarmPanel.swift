@@ -5,8 +5,8 @@ import PrewarmCore
 private enum WarmAccent {
     static let color = NSColor(name: "PrewarmWarmAccent") { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0.9, green: 0.32, blue: 0.12, alpha: 1)
-            : NSColor(srgbRed: 0.84, green: 0.23, blue: 0.075, alpha: 1)
+            ? NSColor(srgbRed: 0.87, green: 0.43, blue: 0.13, alpha: 1)
+            : NSColor(srgbRed: 0.82, green: 0.39, blue: 0.10, alpha: 1)
     }
 }
 private final class WarmingState: ObservableObject {
@@ -105,6 +105,7 @@ final class PrewarmPanel: NSViewController {
     var onSelect: ((String, String, String) -> Void)?
     var onAbout: (() -> Void)?
     var onQuit: (() -> Void)?
+    var onSoundSettings: (() -> Void)?
     var onPrivacy: (() -> Void)?
     private let warmingState = WarmingState()
     private lazy var warmingSwitch = NSHostingView(rootView: WarmingSwitch(model: warmingState))
@@ -122,7 +123,7 @@ final class PrewarmPanel: NSViewController {
             glass.style = .regular
             glass.cornerRadius = 16
             glass.contentView = content
-            if #available(macOS 27.0, *) { glass.effectIsInteractive = true }
+            // The container is a backdrop; interactive glass scales the whole panel on press.
             view = glass
         } else {
             let material = NSVisualEffectView()
@@ -173,9 +174,18 @@ final class PrewarmPanel: NSViewController {
         more.contentTintColor = .secondaryLabelColor
         more.setAccessibilityLabel("More")
         more.toolTip = "About, microphone privacy, and Quit. Audio is never saved or sent."
-        let footer = NSStackView(views: [status, NSView(), more])
-        footer.orientation = .horizontal
-        footer.spacing = 8
+        let sound = NSButton(title: "Sound Settings…", target: self, action: #selector(soundSettings))
+        sound.isBordered = false
+        sound.font = .systemFont(ofSize: 13)
+        sound.alignment = .left
+        let actions = NSStackView(views: [sound, NSView(), more])
+        actions.orientation = .horizontal
+        actions.spacing = 8
+        let footer = NSStackView(views: [status, actions])
+        footer.orientation = .vertical
+        footer.alignment = .leading
+        footer.spacing = 6
+        actions.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
         more.widthAnchor.constraint(equalToConstant: 22).isActive = true
         more.heightAnchor.constraint(equalToConstant: 22).isActive = true
         let stack = NSStackView(views: [headerRow, row, separator(), micHeader, deviceStack, separator(), footer])
@@ -217,6 +227,7 @@ final class PrewarmPanel: NSViewController {
         loadViewIfNeeded()
         self.enabled = enabled
         self.selection = selection
+        defer { view.layoutSubtreeIfNeeded(); preferredContentSize = NSSize(width: 300, height: view.fittingSize.height) }
         warmingState.isOn = enabled
         toggleState.stringValue = enabled ? "On" : "Off"
         status.toolTip = state?.message
@@ -228,6 +239,7 @@ final class PrewarmPanel: NSViewController {
         else if state?.message.contains("sleep") == true { status.stringValue = "Paused" }
         else if state?.targetUID != nil { status.stringValue = "Starting…" }
         else { status.stringValue = "Waiting for microphone" }
+        status.isHidden = status.stringValue == "Ready" || status.stringValue == "Off"
         var choices = [("System default", "", "system")]
         choices += (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }).map { ($0.name, $0.uid, $0.iconKind) }
         if !selection.isEmpty && !choices.contains(where: { $0.1 == selection }) { choices.append(("\(missingName) (disconnected)", selection, missingKind)) }
@@ -247,6 +259,7 @@ final class PrewarmPanel: NSViewController {
     @objc private func closePanel() { onClose?() }
     @objc private func selectDevice(_ sender: DeviceRow) { onSelect?(sender.uid, sender.accessibilityLabel() ?? "Microphone", sender.identifier?.rawValue ?? "other") }
     @objc private func about() { onAbout?() }
+    @objc private func soundSettings() { onSoundSettings?() }
     @objc private func privacySettings() { onPrivacy?() }
     @objc private func quitApp() { onQuit?() }
 }

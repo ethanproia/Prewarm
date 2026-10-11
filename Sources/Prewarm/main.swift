@@ -11,6 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
     private var observers: [NSObjectProtocol] = []
     private var settingsWindow: NSWindow?
+    private var aboutWindow: NSWindow?
     private let popover = NSPopover()
     private lazy var popoverPanel = makePanel()
     private lazy var windowPanel = makePanel()
@@ -19,6 +20,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) else { NSApp.terminate(nil); return }
         NSApp.setActivationPolicy(.accessory)
+        if let iconURL = Bundle.main.url(forResource: "Prewarm", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) { NSApp.applicationIconImage = icon }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = IconArtwork.menuImage(active: false)
         statusItem.button?.toolTip = "Prewarm — Off"
@@ -48,6 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panel.onToggle = { [weak self] in self?.toggleEnabled() }
         panel.onSelect = { [weak self] uid, name, kind in self?.selectMicrophone(uid: uid, name: name, kind: kind) }
         panel.onAbout = { [weak self] in self?.about() }
+        panel.onSoundSettings = { [weak self] in self?.popover.performClose(nil); NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension?input")!) }
         panel.onPrivacy = { [weak self] in self?.openPrivacy() }
         panel.onQuit = { NSApp.terminate(nil) }
         return panel
@@ -102,11 +105,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func openPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }
     private func about() {
         popover.performClose(nil)
+        if aboutWindow == nil {
+            let controller = AboutController()
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 390), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+            window.title = "About Prewarm"
+            window.titleVisibility = .hidden
+            window.titlebarAppearsTransparent = true
+            window.isReleasedWhenClosed = false
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.contentViewController = controller
+            window.center()
+            aboutWindow = window
+        }
+        aboutWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        let alert = NSAlert()
-        alert.messageText = "Prewarm"
-        alert.informativeText = "Keeps your chosen microphone ready for dictation. Audio is never saved or sent.\n\nVersion 0.1.0\nBased on macos-mic-keepwarm by Drew Burchfield (MIT)."
-        alert.runModal()
     }
     func applicationWillTerminate(_ notification: Notification) {
         writeDiagnostics(CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: "Not running", enabled: enabled, selection: selection, targetUID: nil, targetName: nil, running: false, sampleAge: nil, available: state?.available ?? []))
