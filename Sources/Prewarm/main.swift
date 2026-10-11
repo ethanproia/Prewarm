@@ -70,7 +70,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showSettings(); return true }
     private func showSettings() {
         if settingsWindow == nil {
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 300), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+            let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 300, height: 300), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = "Prewarm"
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
@@ -107,7 +107,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         popover.performClose(nil)
         if aboutWindow == nil {
             let controller = AboutController()
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 360, height: 390), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
+            let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 1), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
             window.title = "About Prewarm"
             window.titleVisibility = .hidden
             window.titlebarAppearsTransparent = true
@@ -115,6 +115,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.isOpaque = false
             window.backgroundColor = .clear
             window.contentViewController = controller
+            controller.view.layoutSubtreeIfNeeded()
+            window.setContentSize(controller.view.fittingSize)
             window.center()
             aboutWindow = window
         }

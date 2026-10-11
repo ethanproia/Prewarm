@@ -1,73 +1,88 @@
 import AppKit
+import SwiftUI
+
+/// Status-only apps have no application menu to supply the usual Close shortcut.
+final class PrewarmWindow: NSWindow {
+    override func cancelOperation(_ sender: Any?) { performClose(sender) }
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.charactersIgnoringModifiers == "w" {
+            performClose(nil)
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
+private struct AboutView: SwiftUI.View {
+    let icon: NSImage
+    let version: String
+    let build: String
+    let openDocs: () -> Void
+    let openUpstream: () -> Void
+
+    var body: some SwiftUI.View {
+        VStack(spacing: 10) {
+            Image(nsImage: icon).resizable().aspectRatio(contentMode: .fit).frame(width: 112, height: 112)
+                .accessibilityLabel("Prewarm app icon")
+            Text("Prewarm").font(.system(size: 24, weight: .semibold))
+            Text("Keeps your microphone warm.").font(.system(size: 13))
+            Text("Version \(version) (\(build))").font(.system(size: 11)).foregroundStyle(.secondary)
+            Text("By Ethan Proia").font(.system(size: 12))
+            actions.padding(.vertical, 6)
+            Text("Audio is never saved or sent.").font(.system(size: 11)).foregroundStyle(.secondary)
+            Text("Based on macos-mic-keepwarm\nby Drew Burchfield · MIT license")
+                .font(.system(size: 10)).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Button("Upstream project", action: openUpstream).buttonStyle(.link).font(.system(size: 11))
+                .help("Drew Burchfield's original macos-mic-keepwarm project")
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 36)
+        .padding(.bottom, 24)
+        .frame(width: 320)
+        .textSelection(.enabled)
+    }
+    @ViewBuilder private var actions: some SwiftUI.View {
+        if #available(macOS 26.0, *) { buttons.buttonBorderShape(.capsule) }
+        else { buttons }
+    }
+    private var buttons: some SwiftUI.View {
+        HStack(spacing: 12) {
+            Button("Docs", action: openDocs).help("Open bundled Prewarm documentation")
+            Button("GitHub") { }.disabled(true)
+                .help("The Prewarm repository has not been published yet.")
+                .accessibilityHint("Unavailable until the Prewarm repository is published")
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.large)
+    }
+}
 
 final class AboutController: NSViewController {
+    private let info: [String: Any]
+    init(info: [String: Any] = Bundle.main.infoDictionary ?? [:]) { self.info = info; super.init(nibName: nil, bundle: nil) }
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func loadView() {
-        let content = NSView()
-        if #available(macOS 26.0, *) {
-            let glass = NSGlassEffectView()
-            glass.style = .regular
-            glass.cornerRadius = 20
-            glass.contentView = content
-            view = glass
-        } else {
-            let material = NSVisualEffectView()
-            material.material = .hudWindow
-            material.blendingMode = .behindWindow
-            material.state = .active
-            material.addSubview(content)
-            view = material
-        }
-        content.translatesAutoresizingMaskIntoConstraints = false
+        let material = NSVisualEffectView()
+        material.material = .underWindowBackground
+        material.blendingMode = .behindWindow
+        material.state = .followsWindowActiveState
+        view = material
+        let hosting = NSHostingView(rootView: AboutView(
+            icon: NSApp.applicationIconImage,
+            version: info["CFBundleShortVersionString"] as? String ?? "Unknown",
+            build: info["CFBundleVersion"] as? String ?? "Unknown",
+            openDocs: { if let url = Bundle.main.url(forResource: "README", withExtension: "md") { NSWorkspace.shared.open(url) } },
+            openUpstream: { NSWorkspace.shared.open(URL(string: "https://github.com/drewburchfield/macos-mic-keepwarm")!) }
+        ))
+        hosting.sizingOptions = .intrinsicContentSize
+        hosting.safeAreaRegions = []
+        hosting.translatesAutoresizingMaskIntoConstraints = false
+        material.addSubview(hosting)
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: view.leadingAnchor), content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            content.topAnchor.constraint(equalTo: view.topAnchor), content.bottomAnchor.constraint(equalTo: view.bottomAnchor)
-        ])
-        let icon = NSImageView(image: NSApp.applicationIconImage)
-        icon.imageScaling = .scaleProportionallyUpOrDown
-        icon.widthAnchor.constraint(equalToConstant: 100).isActive = true
-        icon.heightAnchor.constraint(equalToConstant: 100).isActive = true
-        let title = label("Prewarm", size: 24, weight: .semibold)
-        let description = label("Keeps your microphone ready for dictation.", size: 13)
-        let info = Bundle.main.infoDictionary ?? [:]
-        let version = info["CFBundleShortVersionString"] as? String ?? "Unknown"
-        let build = info["CFBundleVersion"] as? String ?? "Unknown"
-        let versionLabel = label("Version \(version) (\(build))", size: 11, color: .secondaryLabelColor)
-        let author = label("By Ethan Proia", size: 12)
-        let docs = NSButton(title: "Documentation", target: self, action: #selector(openDocs))
-        let upstream = NSButton(title: "Upstream", target: self, action: #selector(openUpstream))
-        for button in [docs, upstream] { button.bezelStyle = .rounded }
-        docs.toolTip = "Open the bundled Prewarm documentation"
-        upstream.toolTip = "Drew Burchfield's original macos-mic-keepwarm project"
-        let buttons = NSStackView(views: [docs, upstream])
-        buttons.orientation = .horizontal
-        buttons.spacing = 10
-        let privacy = label("Audio is never saved or sent.", size: 11, color: .secondaryLabelColor)
-        let credit = label("Based on macos-mic-keepwarm\nby Drew Burchfield · MIT license", size: 10, color: .secondaryLabelColor)
-        let stack = NSStackView(views: [icon, title, description, versionLabel, author, buttons, privacy, credit])
-        stack.orientation = .vertical
-        stack.alignment = .centerX
-        stack.spacing = 10
-        stack.setCustomSpacing(16, after: icon)
-        stack.setCustomSpacing(16, after: author)
-        stack.setCustomSpacing(16, after: buttons)
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        content.addSubview(stack)
-        NSLayoutConstraint.activate([
-            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 38),
-            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -20),
-            stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor, constant: -20)
+            hosting.leadingAnchor.constraint(equalTo: material.leadingAnchor), hosting.trailingAnchor.constraint(equalTo: material.trailingAnchor),
+            hosting.topAnchor.constraint(equalTo: material.topAnchor), hosting.bottomAnchor.constraint(equalTo: material.bottomAnchor)
         ])
     }
-    private func label(_ text: String, size: CGFloat, weight: NSFont.Weight = .regular, color: NSColor = .labelColor) -> NSTextField {
-        let label = NSTextField(wrappingLabelWithString: text)
-        label.font = .systemFont(ofSize: size, weight: weight)
-        label.textColor = color
-        label.alignment = .center
-        return label
-    }
-    @objc private func openDocs() {
-        if let url = Bundle.main.url(forResource: "README", withExtension: "md") { NSWorkspace.shared.open(url) }
-    }
-    @objc private func openUpstream() { NSWorkspace.shared.open(URL(string: "https://github.com/drewburchfield/macos-mic-keepwarm")!) }
 }
