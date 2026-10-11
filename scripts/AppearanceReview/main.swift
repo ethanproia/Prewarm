@@ -5,7 +5,7 @@ let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "4"])
+let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "5"])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 let panel = PrewarmPanel()
@@ -53,6 +53,7 @@ for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSApp
     let readySize = panel.preferredContentSize
     let children = descendants(panel.view)
     let hovered = children.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "System default" }!
+    precondition(hovered.subviews.first?.frame.minX == 0, "Device badge must align with the section leading edge")
     let selectedBefore = hovered.accessibilityValue() as? String
     hovered.mouseEntered(with: NSEvent.mouseEvent(with: .mouseMoved, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panelWindow.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!)
     try save(panel.view, "panel-\(name)-hover")

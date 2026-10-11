@@ -70,7 +70,7 @@ private final class DeviceRow: NSButton {
         for view in [badge, label, check] { view.translatesAutoresizingMaskIntoConstraints = false; addSubview(view) }
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 36),
-            badge.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6), badge.centerYAnchor.constraint(equalTo: centerYAnchor),
+            badge.leadingAnchor.constraint(equalTo: leadingAnchor), badge.centerYAnchor.constraint(equalTo: centerYAnchor),
             badge.widthAnchor.constraint(equalToConstant: 28), badge.heightAnchor.constraint(equalToConstant: 28),
             label.leadingAnchor.constraint(equalTo: badge.trailingAnchor, constant: 9), label.centerYAnchor.constraint(equalTo: centerYAnchor),
             label.trailingAnchor.constraint(lessThanOrEqualTo: check.leadingAnchor, constant: -8),
