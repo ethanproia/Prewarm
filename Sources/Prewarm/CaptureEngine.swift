@@ -55,6 +55,16 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
     private func devices() -> [AVCaptureDevice] {
         AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified).devices
     }
+    private func transport(_ device: AVCaptureDevice) -> Microphone.Transport {
+        // AVFoundation defines transportType using IOAudioTypes.h FourCC constants,
+        // which match CoreAudio transport codes; do not infer from product names.
+        switch UInt32(bitPattern: device.transportType) {
+        case kAudioDeviceTransportTypeBuiltIn: return .builtIn
+        case kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE: return .bluetooth
+        case kAudioDeviceTransportTypeUSB: return .usb
+        default: return .other
+        }
+    }
     private func defaultUID() -> String? {
         var address = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)
         var device = AudioDeviceID(0)
@@ -68,7 +78,7 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
     }
     private func reconcile() {
         let inputs = devices()
-        let microphones = inputs.map { Microphone(uid: $0.uniqueID, name: $0.localizedName) }
+        let microphones = inputs.map { Microphone(uid: $0.uniqueID, name: $0.localizedName, transport: transport($0)) }
         defer { publish(microphones) }
         guard enabled, !sleeping else {
             stop()

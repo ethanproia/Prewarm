@@ -9,4 +9,5 @@ Scope: icon identity only. Settings controls, capture behavior, preferences, and
 - Pass: menu image is a monochrome AppKit template with state-specific accessibility descriptions; system controls menu contrast.
 - Pass: generated iconset covers 16, 32, 128, 256, and 512 points at 1×/2×; compiled ICNS is copied to the app bundle and declared in Info.plist.
 - Not run: Rams quick_review/review_files, because the canonical `skill.rams-design-review` dependency is unavailable to this access profile. Direct rendered inspection is recorded above.
+- Pass: `device-icon-review.png` inspected at native 18 px and enlarged 42 px. Built-in mic, Bluetooth headphones, USB interface panel, system routing, and generic waveform distinguish detected input transports. Mapping uses AVFoundation transportType as documented in the installed Apple SDK; labels stay unchanged.
 - Pending: root's inspection of the exact installed app icon and menu item in macOS.

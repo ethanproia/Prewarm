@@ -2,7 +2,7 @@
 
 A tiny macOS menu-bar utility that keeps a microphone's input stream active so dictation can begin without a cold-start gap. It immediately discards audio samples; it does not record, analyze, save, or transmit audio. No third-party dependencies or network calls.
 
-Select **Microphone → System default** to follow the current macOS input, or choose a specific microphone. An explicit choice is pinned by device UID: reconnecting AirPods or changing the system default does not switch it. If the selected microphone disconnects, Prewarm waits for it instead of opening another mic. **Keep microphone warm** releases the input when switched off. Enabled state and the microphone selection persist across relaunches. First launch is off and opens a compact Settings window. Settings are also available from the menu or by reopening the app.
+Select **Microphone → System default** to follow the current macOS input, or choose a specific microphone. The dropdown shows input-type icons based on the detected hardware transport: built-in microphone, Bluetooth headphones, USB audio input/interface, or a generic audio device. USB transport cannot identify the downstream XLR microphone. An explicit choice is pinned by device UID: reconnecting AirPods or changing the system default does not switch it. If the selected microphone disconnects, Prewarm waits for it instead of opening another mic. **Keep microphone warm** releases the input when switched off. Enabled state and the microphone selection persist across relaunches. First launch is off and opens a compact Settings window. Settings are also available from the menu or by reopening the app.
 
 macOS 14 or later; Xcode command-line tools with Swift 5.9 or later.
 

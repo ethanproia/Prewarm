@@ -76,17 +76,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let submenu = NSMenu()
         let system = item("System default", action: #selector(selectMicrophone(_:)))
         system.representedObject = ""
+        system.image = IconArtwork.deviceImage(transport: "system")
         system.state = selection.isEmpty ? .on : .off
         submenu.addItem(system)
         submenu.addItem(.separator())
         for device in (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
             let choice = item(device.name, action: #selector(selectMicrophone(_:)))
             choice.representedObject = device.uid
+            choice.image = IconArtwork.deviceImage(transport: device.transport.rawValue)
             choice.state = selection == device.uid ? .on : .off
             submenu.addItem(choice)
         }
         if !selection.isEmpty && !(state?.available ?? []).contains(where: { $0.uid == selection }) {
             let missing = item("\(defaults.string(forKey: "microphoneName") ?? "Selected microphone") (disconnected)")
+            missing.image = IconArtwork.deviceImage(transport: defaults.string(forKey: "microphoneTransport") ?? "other")
             missing.state = .on
             missing.isEnabled = false
             submenu.addItem(missing)
@@ -115,6 +118,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         guard let uid = sender.representedObject as? String else { return }
         defaults.set(uid, forKey: "microphoneUID")
         defaults.set(sender.title, forKey: "microphoneName")
+        defaults.set(uid.isEmpty ? "system" : (state?.available.first(where: { $0.uid == uid })?.transport.rawValue ?? "other"), forKey: "microphoneTransport")
         apply()
         buildMenu()
         refreshSettings()
@@ -180,13 +184,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         popup.removeAllItems()
         popup.addItem(withTitle: "System default")
         popup.lastItem?.representedObject = ""
+        popup.lastItem?.image = IconArtwork.deviceImage(transport: "system")
         for device in (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }) {
             popup.addItem(withTitle: device.name)
             popup.lastItem?.representedObject = device.uid
+            popup.lastItem?.image = IconArtwork.deviceImage(transport: device.transport.rawValue)
         }
         if !selection.isEmpty && !(state?.available ?? []).contains(where: { $0.uid == selection }) {
             popup.addItem(withTitle: "\(defaults.string(forKey: "microphoneName") ?? "Selected microphone") (disconnected)")
             popup.lastItem?.representedObject = selection
+            popup.lastItem?.image = IconArtwork.deviceImage(transport: defaults.string(forKey: "microphoneTransport") ?? "other")
         }
         if let selected = popup.itemArray.first(where: { ($0.representedObject as? String) == selection }) { popup.select(selected) }
     }

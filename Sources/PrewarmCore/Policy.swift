@@ -1,8 +1,10 @@
 import Foundation
 public struct Microphone: Equatable, Codable {
     public let uid: String
+    public enum Transport: String, Codable { case builtIn, bluetooth, usb, other }
     public let name: String
-    public init(uid: String, name: String) { self.uid = uid; self.name = name }
+    public let transport: Transport
+    public init(uid: String, name: String, transport: Transport = .other) { self.uid = uid; self.name = name; self.transport = transport }
 }
 public enum CapturePolicy {
     public static func target(selection: String, defaultUID: String?, available: [Microphone]) -> Microphone? {

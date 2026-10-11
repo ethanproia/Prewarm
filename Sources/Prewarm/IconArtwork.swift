@@ -51,6 +51,43 @@ enum IconArtwork {
         image.accessibilityDescription = active ? "Prewarm — microphone warm" : "Prewarm — off"
         return image
     }
+    static func deviceImage(transport: String) -> NSImage {
+        if transport == "usb" {
+            let image = NSImage(size: NSSize(width: 18, height: 18), flipped: false) { _ in
+                NSColor.black.setStroke()
+                let panel = NSBezierPath(roundedRect: NSRect(x: 1, y: 4, width: 16, height: 10), xRadius: 2, yRadius: 2)
+                panel.lineWidth = 1.2
+                panel.stroke()
+                for x: CGFloat in [5, 10] {
+                    let port = NSBezierPath(ovalIn: NSRect(x: x - 1.7, y: 7.3, width: 3.4, height: 3.4))
+                    port.lineWidth = 1.1
+                    port.stroke()
+                }
+                let level = NSBezierPath()
+                level.move(to: NSPoint(x: 14, y: 7))
+                level.line(to: NSPoint(x: 14, y: 11))
+                level.lineWidth = 1.3
+                level.lineCapStyle = .round
+                level.stroke()
+                return true
+            }
+            image.isTemplate = true
+            image.accessibilityDescription = "USB audio input"
+            return image
+        }
+        let symbol: String
+        let description: String
+        switch transport {
+        case "builtIn": symbol = "mic"; description = "Built-in microphone"
+        case "bluetooth": symbol = "headphones"; description = "Bluetooth audio input"
+        case "system": symbol = "arrow.triangle.branch"; description = "System default microphone"
+        default: symbol = "waveform"; description = "Audio input"
+        }
+        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: description)!
+            .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 14, weight: .regular))!
+        image.isTemplate = true
+        return image
+    }
     static func drawAppIcon(in rect: NSRect) {
         let tile = NSBezierPath(roundedRect: rect.insetBy(dx: rect.width * 0.065, dy: rect.height * 0.065), xRadius: rect.width * 0.195, yRadius: rect.height * 0.195)
         NSGradient(starting: NSColor(srgbRed: 1, green: 0.71, blue: 0.24, alpha: 1), ending: NSColor(srgbRed: 0.94, green: 0.28, blue: 0.075, alpha: 1))!.draw(in: tile, angle: -75)
