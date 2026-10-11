@@ -13,7 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var observers: [NSObjectProtocol] = []
     private var aboutWindow: NSWindow?
     private lazy var controls = makePanel()
-    private lazy var panelHost = PrewarmPanelHost(content: controls)
+    private lazy var panelHost = makePanelHost()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
@@ -23,12 +23,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         if let iconURL = Bundle.main.url(forResource: "Prewarm", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) { NSApp.applicationIconImage = icon }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.setButtonType(.toggle)
-        (statusItem.button?.cell as? NSButtonCell)?.showsStateBy = .changeBackgroundCellMask
+        if #available(macOS 27.0, *) {
+            statusItem.expandedInterfaceDelegate = self
+        } else {
+            statusItem.button?.setButtonType(.toggle)
+            (statusItem.button?.cell as? NSButtonCell)?.showsStateBy = .changeBackgroundCellMask
+            statusItem.button?.target = self
+            statusItem.button?.action = #selector(togglePanel)
+        }
         statusItem.button?.image = IconArtwork.menuImage(active: false)
         statusItem.button?.toolTip = "Prewarm — Off"
-        statusItem.button?.target = self
-        statusItem.button?.action = #selector(togglePanel)
         engine.onState = { [weak self] state in
             guard let self else { return }
             self.state = state
@@ -46,6 +50,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             defaults.set(true, forKey: "hasShownSettings")
             DispatchQueue.main.async { [weak self] in self?.showPanel() }
         }
+    }
+    private func makePanelHost() -> PrewarmPanelHost {
+        let host = PrewarmPanelHost(content: controls)
+        host.onDismiss = { [weak self] in
+            guard let self else { return }
+            if #available(macOS 27.0, *), let session = self.statusItem.expandedInterfaceSession { session.cancel() }
+            else { self.panelHost.hide() }
+        }
+        host.onDidHide = { [weak self] in
+            if #available(macOS 27.0, *) { self?.statusItem.expandedInterfaceSession?.cancel() }
+        }
+        return host
     }
     private func makePanel() -> PrewarmPanel {
         let controls = PrewarmPanel()
@@ -68,7 +84,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         panelHost.refreshSize()
     }
     @objc private func togglePanel() { if panelHost.isShown { panelHost.dismiss() } else { showPanel() } }
-    private func showPanel() { guard let button = statusItem.button else { return }; refreshPanel(); panelHost.show(below: button) }
+    private func showPanel() {
+        if #available(macOS 27.0, *) {
+            if statusItem.expandedInterfaceSession == nil { statusItem.button?.performClick(nil) }
+        } else { presentPanel() }
+    }
+    private func presentPanel() { guard let button = statusItem.button else { return }; refreshPanel(); panelHost.show(below: button) }
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showPanel(); return true }
     private func toggleEnabled() { enabled.toggle(); defaults.set(enabled, forKey: "enabled"); apply(); refreshPanel() }
     private func selectMicrophone(uid: String, name: String, kind: String) {
@@ -113,6 +134,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let data = try? JSONEncoder().encode(state) { try? data.write(to: directory.appendingPathComponent("status.json"), options: .atomic) }
     }
+}
+@available(macOS 27.0, *)
+extension AppDelegate: NSStatusItemExpandedInterfaceDelegate {
+    func statusItem(_ statusItem: NSStatusItem, didBegin expandedInterfaceSession: NSStatusItemExpandedInterfaceSession) { presentPanel() }
+    func statusItemDidEndExpandedInterfaceSession(_ statusItem: NSStatusItem, animated: Bool) { panelHost.hide() }
 }
 let app = NSApplication.shared
 let delegate = AppDelegate()

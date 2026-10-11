@@ -6,7 +6,7 @@ let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "14"])
+let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "15"])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
@@ -42,6 +42,11 @@ let soundButton = children.compactMap { $0 as? NSButton }.first { $0.accessibili
 let moreButton = children.compactMap { $0 as? NSButton }.first { $0.accessibilityLabel() == "More" }!
 let section = children.compactMap { $0 as? NSTextField }.first { $0.stringValue == "Prewarm" }!
 let headerRect = section.convert(section.alignmentRect(forFrame: section.bounds), to: panelContent.view)
+let switchHost = children.first { $0.accessibilityLabel() == "Keep microphone ready" }!
+let switchRect = switchHost.convert(switchHost.alignmentRect(forFrame: switchHost.bounds), to: panelContent.view)
+precondition(switchRect.midY == headerRect.midY)
+precondition(switchHost.bounds.size == switchHost.intrinsicContentSize)
+print("Header: native switch intrinsic=\(switchHost.intrinsicContentSize), title/switch center=\(headerRect.midY); no fixed size or optical offset")
 let rowRect = deviceRow.convert(deviceRow.bounds, to: panelContent.view)
 let badge = deviceRow.subviews[0]
 precondition(deviceRow.bounds.height == 32 && badge.frame.size == NSSize(width: 26, height: 26))

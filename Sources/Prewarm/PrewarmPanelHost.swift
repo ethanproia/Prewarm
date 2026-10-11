@@ -11,6 +11,8 @@ private final class FloatingPanel: NSPanel {
 
 /// One native panel/window frame and one supported material, without popover chrome.
 final class PrewarmPanelHost {
+    var onDismiss: (() -> Void)?
+    var onDidHide: (() -> Void)?
     let content: PrewarmPanel
     private let panel: FloatingPanel
     private weak var anchor: NSStatusBarButton?
@@ -66,9 +68,11 @@ final class PrewarmPanelHost {
         refreshSize()
         position(below: button)
         panel.makeKeyAndOrderFront(nil)
-        button.state = .on
-        button.cell?.isHighlighted = true
-        button.needsDisplay = true
+        if #unavailable(macOS 27.0) {
+            button.state = .on
+            button.cell?.isHighlighted = true
+            button.needsDisplay = true
+        }
         installMonitors()
     }
     private func position(below button: NSStatusBarButton) {
@@ -77,21 +81,30 @@ final class PrewarmPanelHost {
         let visible = screen.visibleFrame
         let size = panel.frame.size
         let x = min(max(rect.midX - size.width / 2, visible.minX + 8), visible.maxX - size.width - 8)
-        let y = max(visible.minY + 8, min(rect.minY, visible.maxY) - 6 - size.height)
+        // The 27 reference starts 1pt below the bar edge; its pill ends 3pt above it.
+        let edgeGap: CGFloat
+        if #available(macOS 27.0, *) { edgeGap = 1 } else { edgeGap = 6 }
+        let y = max(visible.minY + 8, min(rect.minY, visible.maxY) - edgeGap - size.height)
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
     func dismiss() {
+        if let onDismiss { onDismiss() } else { hide() }
+    }
+    func hide() {
         panel.orderOut(nil)
     }
     private func clearPresentation() {
-        anchor?.state = .off
-        anchor?.cell?.isHighlighted = false
-        anchor?.needsDisplay = true
+        if #unavailable(macOS 27.0) {
+            anchor?.state = .off
+            anchor?.cell?.isHighlighted = false
+            anchor?.needsDisplay = true
+        }
         anchor = nil
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
         globalMonitor = nil
         localMonitor = nil
+        onDidHide?()
     }
     private func installMonitors() {
         guard globalMonitor == nil && localMonitor == nil else { return }
@@ -106,8 +119,10 @@ final class PrewarmPanelHost {
         }
     }
     deinit {
-        anchor?.state = .off
-        anchor?.cell?.isHighlighted = false
+        if #unavailable(macOS 27.0) {
+            anchor?.state = .off
+            anchor?.cell?.isHighlighted = false
+        }
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
     }

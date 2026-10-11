@@ -128,14 +128,20 @@ final class PrewarmPanel: NSViewController {
         header.textColor = .secondaryLabelColor
         warmingState.onChange = { [weak self] _ in self?.onToggle?() }
         warmingSwitch.setAccessibilityLabel("Keep microphone ready")
+        warmingSwitch.safeAreaRegions = []
+        warmingSwitch.sizingOptions = .intrinsicContentSize
+        warmingSwitch.setContentHuggingPriority(.required, for: .horizontal)
+        warmingSwitch.setContentHuggingPriority(.required, for: .vertical)
         let headerRow = NSView()
         for child in [header, warmingSwitch] { child.translatesAutoresizingMaskIntoConstraints = false; headerRow.addSubview(child) }
         NSLayoutConstraint.activate([
             headerRow.heightAnchor.constraint(equalToConstant: 28),
             header.leadingAnchor.constraint(equalTo: headerRow.leadingAnchor), header.centerYAnchor.constraint(equalTo: headerRow.centerYAnchor),
-            warmingSwitch.widthAnchor.constraint(equalToConstant: 38), warmingSwitch.heightAnchor.constraint(equalToConstant: 24),
             warmingSwitch.trailingAnchor.constraint(equalTo: headerRow.trailingAnchor), warmingSwitch.centerYAnchor.constraint(equalTo: headerRow.centerYAnchor)
         ])
+        let micHeader = NSTextField(labelWithString: "Microphone")
+        micHeader.font = .systemFont(ofSize: 12, weight: .regular)
+        micHeader.textColor = .secondaryLabelColor
         deviceStack.orientation = .vertical
         deviceStack.distribution = .fill
         deviceStack.setHuggingPriority(.required, for: .vertical)
@@ -179,7 +185,7 @@ final class PrewarmPanel: NSViewController {
         more.widthAnchor.constraint(equalToConstant: 28).isActive = true
         more.heightAnchor.constraint(equalToConstant: 28).isActive = true
         let headerDivider = separator()
-        let stack = NSStackView(views: [headerRow, headerDivider, deviceStack, separator(), footer])
+        let stack = NSStackView(views: [headerRow, headerDivider, micHeader, deviceStack, separator(), footer])
         contentStack = stack
         stack.orientation = .vertical
         stack.distribution = .fill
@@ -188,10 +194,12 @@ final class PrewarmPanel: NSViewController {
         stack.spacing = 10
         stack.setCustomSpacing(12, after: headerRow)
         stack.setCustomSpacing(12, after: headerDivider)
+        stack.setCustomSpacing(4, after: micHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
         headerRow.translatesAutoresizingMaskIntoConstraints = false
         headerRow.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true
+        micHeader.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true
         deviceStack.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         footer.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         for divider in stack.arrangedSubviews.compactMap({ $0 as? NSBox }) { divider.widthAnchor.constraint(equalTo: stack.widthAnchor, constant: -18).isActive = true }
@@ -229,8 +237,7 @@ final class PrewarmPanel: NSViewController {
         else if state?.targetUID != nil { status.stringValue = "Starting…" }
         else { status.stringValue = "Waiting for microphone" }
         status.isHidden = status.stringValue == "Ready" || status.stringValue == "Off"
-        let defaultIcon = CapturePolicy.systemDefaultIcon(defaultUID: state?.systemDefaultUID, available: state?.available ?? [])
-        var choices = [("System default", "", defaultIcon)]
+        var choices = [("System default", "", "microphone")]
         choices += (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }).map { ($0.name, $0.uid, $0.iconKind) }
         if !selection.isEmpty && !choices.contains(where: { $0.1 == selection }) { choices.append(("\(missingName) (disconnected)", selection, missingKind)) }
         let fingerprint = choices.map { "\($0.0)|\($0.1)|\($0.2)|\($0.1 == selection)" }
