@@ -1,5 +1,27 @@
 import AppKit
+import SwiftUI
 import PrewarmCore
+
+private enum WarmAccent {
+    static let color = NSColor(name: "PrewarmWarmAccent") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 0.9, green: 0.32, blue: 0.12, alpha: 1)
+            : NSColor(srgbRed: 0.84, green: 0.23, blue: 0.075, alpha: 1)
+    }
+}
+private final class WarmingState: ObservableObject {
+    @Published var isOn = false
+    var onChange: ((Bool) -> Void)?
+}
+private struct WarmingSwitch: SwiftUI.View {
+    @ObservedObject var model: WarmingState
+    var body: some SwiftUI.View {
+        Toggle("Keep microphone ready", isOn: Binding(get: { model.isOn }, set: { model.onChange?($0) }))
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .tint(Color(nsColor: WarmAccent.color))
+    }
+}
 
 private final class DeviceBadge: NSView {
     private let imageView = NSImageView()
@@ -17,7 +39,7 @@ private final class DeviceBadge: NSView {
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
     override func draw(_ dirtyRect: NSRect) {
-        (selected ? NSColor.controlAccentColor : NSColor.quaternaryLabelColor).setFill()
+        (selected ? WarmAccent.color : NSColor.quaternaryLabelColor).setFill()
         NSBezierPath(ovalIn: bounds).fill()
     }
     override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
@@ -25,6 +47,8 @@ private final class DeviceBadge: NSView {
 
 private final class DeviceRow: NSButton {
     let uid: String
+    private var hovering = false
+    private var hoverArea: NSTrackingArea?
     init(name: String, uid: String, kind: String, selected: Bool, action: Selector, target: AnyObject) {
         self.uid = uid
         super.init(frame: .zero)
@@ -45,15 +69,34 @@ private final class DeviceRow: NSButton {
         for view in [badge, label, check] { view.translatesAutoresizingMaskIntoConstraints = false; addSubview(view) }
         NSLayoutConstraint.activate([
             heightAnchor.constraint(equalToConstant: 36),
-            badge.leadingAnchor.constraint(equalTo: leadingAnchor), badge.centerYAnchor.constraint(equalTo: centerYAnchor),
+            badge.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 6), badge.centerYAnchor.constraint(equalTo: centerYAnchor),
             badge.widthAnchor.constraint(equalToConstant: 28), badge.heightAnchor.constraint(equalToConstant: 28),
             label.leadingAnchor.constraint(equalTo: badge.trailingAnchor, constant: 9), label.centerYAnchor.constraint(equalTo: centerYAnchor),
             label.trailingAnchor.constraint(lessThanOrEqualTo: check.leadingAnchor, constant: -8),
-            check.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -1), check.centerYAnchor.constraint(equalTo: centerYAnchor),
+            check.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -7), check.centerYAnchor.constraint(equalTo: centerYAnchor),
             check.widthAnchor.constraint(equalToConstant: 13), check.heightAnchor.constraint(equalToConstant: 13)
         ])
     }
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let old = hoverArea { removeTrackingArea(old) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+    override func mouseEntered(with event: NSEvent) { hovering = true; needsDisplay = true }
+    override func mouseExited(with event: NSEvent) { hovering = false; needsDisplay = true }
+    override func draw(_ dirtyRect: NSRect) {
+        if hovering || isHighlighted {
+            let color = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+                ? NSColor.controlBackgroundColor
+                : NSColor.labelColor.withAlphaComponent(isHighlighted ? 0.13 : 0.07)
+            color.setFill()
+            NSBezierPath(roundedRect: bounds, xRadius: 8, yRadius: 8).fill()
+        }
+    }
+    override func viewDidChangeEffectiveAppearance() { super.viewDidChangeEffectiveAppearance(); needsDisplay = true }
 }
 
 final class PrewarmPanel: NSViewController {
@@ -63,7 +106,8 @@ final class PrewarmPanel: NSViewController {
     var onAbout: (() -> Void)?
     var onQuit: (() -> Void)?
     var onPrivacy: (() -> Void)?
-    private let warmingSwitch = NSSwitch()
+    private let warmingState = WarmingState()
+    private lazy var warmingSwitch = NSHostingView(rootView: WarmingSwitch(model: warmingState))
     private let toggleState = NSTextField(labelWithString: "Off")
     private let deviceStack = NSStackView()
     private let status = NSTextField(labelWithString: "Off")
@@ -72,11 +116,27 @@ final class PrewarmPanel: NSViewController {
     private var selection = ""
 
     override func loadView() {
-        let material = NSVisualEffectView()
-        material.material = .popover
-        material.blendingMode = .behindWindow
-        material.state = .active
-        view = material
+        let content = NSView()
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.style = .regular
+            glass.cornerRadius = 16
+            glass.contentView = content
+            if #available(macOS 27.0, *) { glass.effectIsInteractive = true }
+            view = glass
+        } else {
+            let material = NSVisualEffectView()
+            material.material = .popover
+            material.blendingMode = .behindWindow
+            material.state = .active
+            material.addSubview(content)
+            view = material
+        }
+        content.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            content.leadingAnchor.constraint(equalTo: view.leadingAnchor), content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            content.topAnchor.constraint(equalTo: view.topAnchor), content.bottomAnchor.constraint(equalTo: view.bottomAnchor)
+        ])
         let header = NSTextField(labelWithString: "Prewarm")
         header.font = .systemFont(ofSize: 18, weight: .semibold)
         let close = NSButton(image: NSImage(systemSymbolName: "xmark", accessibilityDescription: "Close")!, target: self, action: #selector(closePanel))
@@ -88,8 +148,7 @@ final class PrewarmPanel: NSViewController {
         close.heightAnchor.constraint(equalToConstant: 18).isActive = true
         let label = NSTextField(labelWithString: "Keep microphone ready")
         label.font = .systemFont(ofSize: 13)
-        warmingSwitch.target = self
-        warmingSwitch.action = #selector(toggle)
+        warmingState.onChange = { [weak self] _ in self?.onToggle?() }
         warmingSwitch.setAccessibilityLabel("Keep microphone ready")
         toggleState.font = .systemFont(ofSize: 11)
         toggleState.textColor = .secondaryLabelColor
@@ -99,6 +158,7 @@ final class PrewarmPanel: NSViewController {
             row.heightAnchor.constraint(equalToConstant: 28),
             label.leadingAnchor.constraint(equalTo: row.leadingAnchor), label.centerYAnchor.constraint(equalTo: row.centerYAnchor),
             toggleState.trailingAnchor.constraint(equalTo: warmingSwitch.leadingAnchor, constant: -7), toggleState.centerYAnchor.constraint(equalTo: row.centerYAnchor),
+            warmingSwitch.widthAnchor.constraint(equalToConstant: 38), warmingSwitch.heightAnchor.constraint(equalToConstant: 24),
             warmingSwitch.trailingAnchor.constraint(equalTo: row.trailingAnchor), warmingSwitch.centerYAnchor.constraint(equalTo: row.centerYAnchor)
         ])
         let micHeader = NSTextField(labelWithString: "Microphone")
@@ -108,58 +168,63 @@ final class PrewarmPanel: NSViewController {
         deviceStack.spacing = 2
         status.font = .systemFont(ofSize: 11)
         status.textColor = .secondaryLabelColor
-        let privacy = NSTextField(labelWithString: "Audio is never saved or sent.")
-        privacy.font = .systemFont(ofSize: 11)
-        privacy.textColor = .secondaryLabelColor
-        let footer = NSStackView(views: [status, privacy])
-        footer.orientation = .vertical
-        footer.alignment = .leading
-        footer.spacing = 4
-        let about = button("About", action: #selector(about))
-        let privacyButton = button("Privacy…", action: #selector(privacySettings))
-        let quit = button("Quit", action: #selector(quitApp))
-        let spacer = NSView()
-        let actions = NSStackView(views: [about, privacyButton, spacer, quit])
-        actions.orientation = .horizontal
-        actions.spacing = 12
-        let stack = NSStackView(views: [headerRow, row, separator(), micHeader, deviceStack, separator(), footer, actions])
+        let more = NSButton(image: NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "More")!, target: self, action: #selector(showMore(_:)))
+        more.isBordered = false
+        more.contentTintColor = .secondaryLabelColor
+        more.setAccessibilityLabel("More")
+        more.toolTip = "About, microphone privacy, and Quit. Audio is never saved or sent."
+        let footer = NSStackView(views: [status, NSView(), more])
+        footer.orientation = .horizontal
+        footer.spacing = 8
+        more.widthAnchor.constraint(equalToConstant: 22).isActive = true
+        more.heightAnchor.constraint(equalToConstant: 22).isActive = true
+        let stack = NSStackView(views: [headerRow, row, separator(), micHeader, deviceStack, separator(), footer])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 10
         stack.setCustomSpacing(12, after: headerRow)
         stack.setCustomSpacing(4, after: micHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(stack)
-        for wide in [headerRow, row, deviceStack, footer, actions] {
+        content.addSubview(stack)
+        for wide in [headerRow, row, deviceStack, footer] {
             wide.translatesAutoresizingMaskIntoConstraints = false
             wide.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true
         }
         for divider in stack.arrangedSubviews.compactMap({ $0 as? NSBox }) { divider.widthAnchor.constraint(equalTo: stack.widthAnchor).isActive = true }
         NSLayoutConstraint.activate([
             view.widthAnchor.constraint(equalToConstant: 300),
-            stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
-            stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            stack.topAnchor.constraint(equalTo: view.topAnchor, constant: 16),
-            stack.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -12)
+            stack.leadingAnchor.constraint(equalTo: content.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: -16),
+            stack.topAnchor.constraint(equalTo: content.topAnchor, constant: 16),
+            stack.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: -12)
         ])
     }
     private func separator() -> NSBox { let box = NSBox(); box.boxType = .separator; return box }
-    private func button(_ title: String, action: Selector) -> NSButton {
-        let button = NSButton(title: title, target: self, action: action)
-        button.isBordered = false
-        button.font = .systemFont(ofSize: 11)
-        button.contentTintColor = .secondaryLabelColor
-        return button
+    @objc private func showMore(_ sender: NSButton) {
+        let menu = NSMenu()
+        let privacy = NSMenuItem(title: "Audio is never saved or sent.", action: nil, keyEquivalent: "")
+        privacy.isEnabled = false
+        menu.addItem(privacy)
+        menu.addItem(.separator())
+        for (title, selector) in [("About Prewarm…", #selector(about)), ("Microphone Privacy…", #selector(privacySettings)), ("Quit Prewarm", #selector(quitApp))] {
+            let item = NSMenuItem(title: title, action: selector, keyEquivalent: "")
+            item.target = self
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil, at: NSPoint(x: 0, y: sender.bounds.minY), in: sender)
     }
     func update(state: CaptureState?, enabled: Bool, selection: String, missingName: String, missingKind: String) {
         loadViewIfNeeded()
         self.enabled = enabled
         self.selection = selection
-        warmingSwitch.state = enabled ? .on : .off
+        warmingState.isOn = enabled
         toggleState.stringValue = enabled ? "On" : "Off"
+        status.toolTip = state?.message
+        status.setAccessibilityHelp(state?.message)
         if !enabled { status.stringValue = "Off" }
         else if state?.running == true, state?.sampleAge != nil { status.stringValue = "Ready" }
         else if state?.message.contains("access") == true { status.stringValue = "Microphone access required" }
+        else if state?.message.hasPrefix("Cannot") == true || state?.message.hasPrefix("Microphone unavailable") == true { status.stringValue = "Microphone unavailable" }
         else if state?.message.contains("sleep") == true { status.stringValue = "Paused" }
         else if state?.targetUID != nil { status.stringValue = "Starting…" }
         else { status.stringValue = "Waiting for microphone" }
@@ -180,7 +245,6 @@ final class PrewarmPanel: NSViewController {
         preferredContentSize = NSSize(width: 300, height: view.fittingSize.height)
     }
     @objc private func closePanel() { onClose?() }
-    @objc private func toggle() { onToggle?() }
     @objc private func selectDevice(_ sender: DeviceRow) { onSelect?(sender.uid, sender.accessibilityLabel() ?? "Microphone", sender.identifier?.rawValue ?? "other") }
     @objc private func about() { onAbout?() }
     @objc private func privacySettings() { onPrivacy?() }
