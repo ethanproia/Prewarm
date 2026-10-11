@@ -31,6 +31,10 @@ public struct Microphone: Equatable, Codable {
 
 }
 public enum CapturePolicy {
+    public static func systemDefaultIcon(defaultUID: String?, available: [Microphone]) -> String {
+        guard let mic = available.first(where: { $0.uid == defaultUID }), mic.presentation != .other else { return "microphone" }
+        return mic.iconKind
+    }
     public static func target(selection: String, defaultUID: String?, available: [Microphone]) -> Microphone? {
         let uid = selection.isEmpty ? defaultUID : selection
         return available.first { $0.uid == uid }
@@ -38,5 +42,10 @@ public enum CapturePolicy {
     public static func needsRestart(currentUID: String?, targetUID: String?, running: Bool, lastSampleAge: TimeInterval?) -> Bool {
         guard let targetUID else { return currentUID != nil }
         return currentUID != targetUID || !running || (lastSampleAge ?? 0) > 10
+    }
+}
+public enum StartupPolicy {
+    public static func initialEnabled(isLoginLaunch: Bool, enableAtLogin: Bool, savedEnabled: Bool) -> Bool {
+        isLoginLaunch ? enableAtLogin : savedEnabled
     }
 }

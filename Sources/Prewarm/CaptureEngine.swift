@@ -14,6 +14,7 @@ struct CaptureState: Codable {
     let running: Bool
     let sampleAge: Double?
     let available: [Microphone]
+    var systemDefaultUID: String? = nil
 }
 
 /// All capture/session state and sample callbacks are confined to this queue.
@@ -82,7 +83,8 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
     private func reconcile() {
         let inputs = devices()
         let microphones = inputs.map { Microphone(uid: $0.uniqueID, name: $0.localizedName, transport: transport($0), modelID: $0.modelID, manufacturer: $0.manufacturer) }
-        defer { publish(microphones) }
+        let systemDefault = defaultUID()
+        defer { publish(microphones, systemDefaultUID: systemDefault) }
         guard enabled, !sleeping else {
             stop()
             message = sleeping && enabled ? "Paused during sleep" : "Off"
@@ -93,7 +95,7 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
             message = "Microphone access required"
             return
         }
-        guard let target = CapturePolicy.target(selection: selection, defaultUID: defaultUID(), available: microphones),
+        guard let target = CapturePolicy.target(selection: selection, defaultUID: systemDefault, available: microphones),
               let device = inputs.first(where: { $0.uniqueID == target.uid }) else {
             stop()
             message = selection.isEmpty ? "Waiting for system microphone" : "Waiting for selected microphone"
@@ -155,8 +157,8 @@ final class CaptureEngine: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
         guard enabled, !sleeping, session?.outputs.contains(where: { $0 === output }) == true else { return }
         lastSample = ProcessInfo.processInfo.systemUptime
     }
-    private func publish(_ available: [Microphone]) {
-        let state = CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: message, enabled: enabled, selection: selection, targetUID: currentUID, targetName: currentName, running: session?.isRunning ?? false, sampleAge: lastSample.map { ProcessInfo.processInfo.systemUptime - $0 }, available: available)
+    private func publish(_ available: [Microphone], systemDefaultUID: String?) {
+        let state = CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: message, enabled: enabled, selection: selection, targetUID: currentUID, targetName: currentName, running: session?.isRunning ?? false, sampleAge: lastSample.map { ProcessInfo.processInfo.systemUptime - $0 }, available: available, systemDefaultUID: systemDefaultUID)
         DispatchQueue.main.async { [weak self] in self?.onState?(state) }
     }
 }

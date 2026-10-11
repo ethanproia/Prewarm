@@ -245,7 +245,8 @@ final class PrewarmPanel: NSViewController {
         else if state?.targetUID != nil { status.stringValue = "Starting…" }
         else { status.stringValue = "Waiting for microphone" }
         status.isHidden = status.stringValue == "Ready" || status.stringValue == "Off"
-        var choices = [("System default", "", "system")]
+        let defaultIcon = CapturePolicy.systemDefaultIcon(defaultUID: state?.systemDefaultUID, available: state?.available ?? [])
+        var choices = [("System default", "", defaultIcon)]
         choices += (state?.available ?? []).sorted(by: { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }).map { ($0.name, $0.uid, $0.iconKind) }
         if !selection.isEmpty && !choices.contains(where: { $0.1 == selection }) { choices.append(("\(missingName) (disconnected)", selection, missingKind)) }
         let fingerprint = choices.map { "\($0.0)|\($0.1)|\($0.2)|\($0.1 == selection)" }
