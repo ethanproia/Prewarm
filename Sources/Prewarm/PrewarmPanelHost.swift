@@ -59,19 +59,16 @@ final class PrewarmPanelHost {
         // Full-size content occupies the native frame; do not add title-bar height.
         panel.setFrame(NSRect(origin: panel.frame.origin, size: content.preferredContentSize), display: false)
         panel.contentView?.layoutSubtreeIfNeeded()
-        if isShown, let anchor { position(below: anchor); anchor.highlight(true) }
+        if isShown, let anchor { position(below: anchor) }
     }
     func show(below button: NSStatusBarButton) {
         anchor = button
         refreshSize()
         position(below: button)
         panel.makeKeyAndOrderFront(nil)
-        button.highlight(true)
-        // Status-button mouse tracking can clear highlighting after its action returns.
-        DispatchQueue.main.async { [weak self] in
-            guard let self, self.isShown else { return }
-            self.anchor?.highlight(true)
-        }
+        button.state = .on
+        button.cell?.isHighlighted = true
+        button.needsDisplay = true
         installMonitors()
     }
     private func position(below button: NSStatusBarButton) {
@@ -80,14 +77,16 @@ final class PrewarmPanelHost {
         let visible = screen.visibleFrame
         let size = panel.frame.size
         let x = min(max(rect.midX - size.width / 2, visible.minX + 8), visible.maxX - size.width - 8)
-        let y = max(visible.minY + 8, min(window.frame.minY, visible.maxY) - 6 - size.height)
+        let y = max(visible.minY + 8, min(rect.minY, visible.maxY) - 6 - size.height)
         panel.setFrameOrigin(NSPoint(x: x, y: y))
     }
     func dismiss() {
         panel.orderOut(nil)
     }
     private func clearPresentation() {
-        anchor?.highlight(false)
+        anchor?.state = .off
+        anchor?.cell?.isHighlighted = false
+        anchor?.needsDisplay = true
         anchor = nil
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
@@ -107,7 +106,8 @@ final class PrewarmPanelHost {
         }
     }
     deinit {
-        anchor?.highlight(false)
+        anchor?.state = .off
+        anchor?.cell?.isHighlighted = false
         if let monitor = globalMonitor { NSEvent.removeMonitor(monitor) }
         if let monitor = localMonitor { NSEvent.removeMonitor(monitor) }
     }

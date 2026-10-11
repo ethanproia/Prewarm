@@ -20,6 +20,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         if let iconURL = Bundle.main.url(forResource: "Prewarm", withExtension: "icns"), let icon = NSImage(contentsOf: iconURL) { NSApp.applicationIconImage = icon }
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem.button?.setButtonType(.toggle)
+        (statusItem.button?.cell as? NSButtonCell)?.showsStateBy = .changeBackgroundCellMask
         statusItem.button?.image = IconArtwork.menuImage(active: false)
         statusItem.button?.toolTip = "Prewarm — Off"
         statusItem.button?.target = self

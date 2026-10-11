@@ -98,7 +98,7 @@ private final class DeviceRow: HoverButton {
             badge.widthAnchor.constraint(equalToConstant: 26), badge.heightAnchor.constraint(equalToConstant: 26),
             label.leadingAnchor.constraint(equalTo: badge.trailingAnchor, constant: 8), label.centerYAnchor.constraint(equalTo: centerYAnchor),
             label.trailingAnchor.constraint(lessThanOrEqualTo: check.leadingAnchor, constant: -8),
-            check.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -9), check.centerYAnchor.constraint(equalTo: centerYAnchor),
+            check.centerXAnchor.constraint(equalTo: trailingAnchor, constant: -23), check.centerYAnchor.constraint(equalTo: centerYAnchor),
             check.widthAnchor.constraint(equalToConstant: 13), check.heightAnchor.constraint(equalToConstant: 13)
         ])
     }

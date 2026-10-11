@@ -5,7 +5,7 @@ let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "12"])
+let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "13"])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
@@ -54,6 +54,9 @@ let moreRect = moreButton.convert(moreButton.bounds, to: panelContent.view)
 precondition(soundRect.minX == rowRect.minX && soundRect.height == 22 && moreRect.minX - soundRect.maxX == 6)
 let soundLabel = soundButton.subviews[0]
 precondition(soundLabel.convert(soundLabel.alignmentRect(forFrame: soundLabel.bounds), to: panelContent.view).minX == headerRect.minX)
+let selectedRow = children.compactMap { $0 as? NSButton }.first { $0.accessibilityValue() as? String == "Selected" }!
+let check = selectedRow.subviews.last!
+precondition(check.convert(check.bounds, to: panelContent.view).midX == moreRect.midX)
 let hoverEvent = NSEvent.mouseEvent(with: .mouseMoved, location: .zero, modifierFlags: [], timestamp: 0, windowNumber: panelWindow.windowNumber, context: nil, eventNumber: 0, clickCount: 0, pressure: 0)!
 func savePanel(_ filename: String) throws {
     let rep = panelContent.view.bitmapImageRepForCachingDisplay(in: panelContent.view.bounds)!
