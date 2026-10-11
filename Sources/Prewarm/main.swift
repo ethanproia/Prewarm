@@ -2,7 +2,7 @@ import AppKit
 import AVFoundation
 import PrewarmCore
 
-final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private let engine = CaptureEngine()
     private var state: CaptureState?
@@ -11,7 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
     private var observers: [NSObjectProtocol] = []
     private var aboutWindow: NSWindow?
-    private let controls = PrewarmMenu()
+    private lazy var controls = makePanel()
+    private lazy var panelHost = PrewarmPanelHost(content: controls)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
@@ -21,45 +22,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         statusItem.button?.image = IconArtwork.menuImage(active: false)
         statusItem.button?.toolTip = "Prewarm — Off"
-        statusItem.menu = controls.menu
-        controls.menu.delegate = self
-        controls.onToggle = { [weak self] in self?.toggleEnabled() }
-        controls.onSelect = { [weak self] uid, name, kind in self?.selectMicrophone(uid: uid, name: name, kind: kind) }
-        controls.onAbout = { [weak self] in self?.about() }
-        controls.onSoundSettings = { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension?input")!) }
-        controls.onPrivacy = { [weak self] in self?.openPrivacy() }
-        controls.onQuit = { NSApp.terminate(nil) }
+        statusItem.button?.target = self
+        statusItem.button?.action = #selector(togglePanel)
         engine.onState = { [weak self] state in
             guard let self else { return }
             self.state = state
             self.statusItem.button?.image = IconArtwork.menuImage(active: state.running)
             self.statusItem.button?.toolTip = "Prewarm — \(state.message)"
+            self.refreshPanel()
             self.writeDiagnostics(state)
         }
         let center = NSWorkspace.shared.notificationCenter
         observers.append(center.addObserver(forName: NSWorkspace.willSleepNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(true) })
         observers.append(center.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in self?.engine.setSleeping(false) })
         apply()
-        refreshMenu()
+        refreshPanel()
         if !defaults.bool(forKey: "hasShownSettings") {
             defaults.set(true, forKey: "hasShownSettings")
-            DispatchQueue.main.async { [weak self] in self?.showMenu() }
+            DispatchQueue.main.async { [weak self] in self?.showPanel() }
         }
     }
-    private func refreshMenu() {
+    private func makePanel() -> PrewarmPanel {
+        let controls = PrewarmPanel()
+        controls.onToggle = { [weak self] in self?.toggleEnabled() }
+        controls.onSelect = { [weak self] uid, name, kind in self?.selectMicrophone(uid: uid, name: name, kind: kind) }
+        controls.onAbout = { [weak self] in self?.about() }
+        controls.onSoundSettings = { [weak self] in
+            self?.panelHost.dismiss()
+            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Sound-Settings.extension?input")!)
+        }
+        controls.onPrivacy = { [weak self] in self?.panelHost.dismiss(); self?.openPrivacy() }
+        controls.onQuit = { NSApp.terminate(nil) }
+        return controls
+    }
+    private func refreshPanel() {
         let name = defaults.string(forKey: "microphoneName") ?? "Selected microphone"
         let kind = defaults.string(forKey: "microphoneIconKind") ?? defaults.string(forKey: "microphoneTransport") ?? "other"
         controls.update(state: state, enabled: enabled, selection: selection, missingName: name, missingKind: kind)
+        panelHost.refreshSize()
     }
-    func menuNeedsUpdate(_ menu: NSMenu) { refreshMenu() }
-    private func showMenu() { statusItem.button?.performClick(nil) }
-    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showMenu(); return true }
-    private func toggleEnabled() { defaults.set(!enabled, forKey: "enabled"); apply() }
+    @objc private func togglePanel() { if panelHost.isShown { panelHost.dismiss() } else { showPanel() } }
+    private func showPanel() { guard let button = statusItem.button else { return }; refreshPanel(); panelHost.show(below: button) }
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool { showPanel(); return true }
+    private func toggleEnabled() { defaults.set(!enabled, forKey: "enabled"); apply(); refreshPanel() }
     private func selectMicrophone(uid: String, name: String, kind: String) {
         defaults.set(uid, forKey: "microphoneUID")
         defaults.set(name, forKey: "microphoneName")
         defaults.set(kind, forKey: "microphoneIconKind")
         apply()
+        refreshPanel()
     }
     private func apply() {
         if enabled && AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
@@ -69,6 +80,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     private func openPrivacy() { NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone")!) }
     private func about() {
+        panelHost.dismiss()
         if aboutWindow == nil {
             let controller = AboutController()
             let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 1), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
