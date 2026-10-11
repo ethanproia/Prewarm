@@ -174,14 +174,16 @@ final class PrewarmPanel: NSViewController {
         actions.widthAnchor.constraint(equalTo: footer.widthAnchor).isActive = true
         more.widthAnchor.constraint(equalToConstant: 28).isActive = true
         more.heightAnchor.constraint(equalToConstant: 28).isActive = true
-        let stack = NSStackView(views: [headerRow, row, separator(), micHeader, deviceStack, separator(), footer])
+        let headerDivider = separator()
+        let stack = NSStackView(views: [headerRow, headerDivider, row, separator(), micHeader, deviceStack, separator(), footer])
         contentStack = stack
         stack.orientation = .vertical
         stack.distribution = .fill
         stack.setHuggingPriority(.required, for: .vertical)
         stack.alignment = .leading
         stack.spacing = 10
-        stack.setCustomSpacing(12, after: headerRow)
+        stack.setCustomSpacing(8, after: headerRow)
+        stack.setCustomSpacing(8, after: headerDivider)
         stack.setCustomSpacing(4, after: micHeader)
         stack.translatesAutoresizingMaskIntoConstraints = false
         content.addSubview(stack)
