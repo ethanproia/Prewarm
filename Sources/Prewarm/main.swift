@@ -8,6 +8,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var state: CaptureState?
     private let defaults = UserDefaults.standard
     private var enabled = false
+    private var ownsDiagnostics = false
     private let loginSettings = LoginSettings()
     private var selection: String { defaults.string(forKey: "microphoneUID") ?? "" }
     private var observers: [NSObjectProtocol] = []
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         let bundleID = Bundle.main.bundleIdentifier ?? "com.ethan.Prewarm"
         guard !NSRunningApplication.runningApplications(withBundleIdentifier: bundleID).contains(where: { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }) else { NSApp.terminate(nil); return }
+        ownsDiagnostics = true
         let loginLaunch = LoginSettings.isLoginLaunch(NSAppleEventManager.shared().currentAppleEvent)
         enabled = StartupPolicy.initialEnabled(isLoginLaunch: loginLaunch, enableAtLogin: loginSettings.enableAtLogin, savedEnabled: defaults.bool(forKey: "enabled"))
         NSApp.setActivationPolicy(.accessory)
@@ -130,6 +132,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         writeDiagnostics(CaptureState(processID: ProcessInfo.processInfo.processIdentifier, updatedAt: Date(), message: "Not running", enabled: enabled, selection: selection, targetUID: nil, targetName: nil, running: false, sampleAge: nil, available: state?.available ?? []))
     }
     private func writeDiagnostics(_ state: CaptureState) {
+        guard ownsDiagnostics else { return }
         let directory = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("com.ethan.Prewarm")
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let data = try? JSONEncoder().encode(state) { try? data.write(to: directory.appendingPathComponent("status.json"), options: .atomic) }

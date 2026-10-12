@@ -36,14 +36,6 @@ final class PolicyTests: XCTestCase {
         for _ in 0..<3 { XCTAssertTrue(CapturePolicy.needsRestart(currentUID: nil, targetUID: "scarlett", running: false, lastSampleAge: nil)) }
         XCTAssertTrue(CapturePolicy.needsRestart(currentUID: "scarlett", targetUID: "scarlett", running: true, lastSampleAge: 11))
     }
-    func testDefaultIconUsesSystemInputInsteadOfPinnedTarget() {
-        let pro = Microphone(uid: "pro", name: "AirPods Pro", transport: .bluetooth)
-        XCTAssertEqual(CapturePolicy.target(selection: "scarlett", defaultUID: "pro", available: [scarlett, pro]), scarlett)
-        XCTAssertEqual(CapturePolicy.systemDefaultIcon(defaultUID: "pro", available: [scarlett, pro]), "airpodspro")
-        XCTAssertFalse(CapturePolicy.needsRestart(currentUID: "scarlett", targetUID: "scarlett", running: true, lastSampleAge: 0))
-        XCTAssertEqual(CapturePolicy.systemDefaultIcon(defaultUID: nil, available: [scarlett, pro]), "microphone")
-        XCTAssertEqual(CapturePolicy.systemDefaultIcon(defaultUID: "missing", available: [scarlett, pro]), "microphone")
-    }
     func testLoginPolicyKeepsNormalRelaunchPreferenceIndependent() {
         for saved in [false, true] {
             for atLogin in [false, true] {

@@ -22,7 +22,7 @@ for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSApp
     print("About \(name): fit=\(size), inherited=\(controller.view.effectiveAppearance.name.rawValue); offscreen fixture, not live glass backdrop")
 }
 let devices = [Microphone(uid: "scarlett", name: "Scarlett Solo USB", transport: .usb, manufacturer: "Focusrite"), Microphone(uid: "airpods", name: "Ethan's AirPods Pro", transport: .bluetooth)]
-let state = CaptureState(processID: 0, updatedAt: Date(), message: "Warming", enabled: true, selection: "scarlett", targetUID: "scarlett", targetName: "Scarlett Solo USB", running: true, sampleAge: 0, available: devices, systemDefaultUID: "airpods")
+let state = CaptureState(processID: 0, updatedAt: Date(), message: "Warming", enabled: true, selection: "scarlett", targetUID: "scarlett", targetName: "Scarlett Solo USB", running: true, sampleAge: 0, available: devices)
 let panelContent = PrewarmPanel()
 panelContent.update(state: state, enabled: true, selection: "scarlett", missingName: "Scarlett Solo USB", missingKind: "interface")
 let host = PrewarmPanelHost(content: panelContent)

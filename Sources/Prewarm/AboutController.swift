@@ -5,7 +5,7 @@ import SwiftUI
 final class PrewarmWindow: NSWindow {
     override func cancelOperation(_ sender: Any?) { performClose(sender) }
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
-        if event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+        if event.modifierFlags.intersection([.command, .option, .control, .shift]) == .command,
            event.charactersIgnoringModifiers == "w" {
             performClose(nil)
             return true
