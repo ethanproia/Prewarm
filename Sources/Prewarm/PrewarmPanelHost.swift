@@ -30,6 +30,8 @@ final class PrewarmPanelHost {
         panel.isOpaque = false
         panel.backgroundColor = .clear
         panel.hidesOnDeactivate = false
+        panel.isMovable = false
+        panel.isMovableByWindowBackground = false
         panel.level = .floating
         panel.collectionBehavior = [.transient, .moveToActiveSpace, .fullScreenAuxiliary]
         for kind: NSWindow.ButtonType in [.closeButton, .miniaturizeButton, .zoomButton] { panel.standardWindowButton(kind)?.isHidden = true }

@@ -6,7 +6,7 @@ let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "15"])
+let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "16"])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
