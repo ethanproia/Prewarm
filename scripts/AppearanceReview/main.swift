@@ -6,7 +6,7 @@ let root = CommandLine.arguments[1]
 let app = NSApplication.shared
 app.setActivationPolicy(.prohibited)
 app.applicationIconImage = NSImage(contentsOfFile: "\(root)/assets/Prewarm.icns")!
-let controller = AboutController(info: ["CFBundleShortVersionString": "0.1.2", "CFBundleVersion": "16"])
+let controller = AboutController(info: ["CFBundleShortVersionString": CommandLine.arguments[2], "CFBundleVersion": CommandLine.arguments[3]])
 let window = PrewarmWindow(contentRect: NSRect(x: 0, y: 0, width: 320, height: 460), styleMask: [.titled, .closable, .fullSizeContentView], backing: .buffered, defer: false)
 window.contentViewController = controller
 for (name, appearanceName) in [("light", NSAppearance.Name.aqua), ("dark", NSAppearance.Name.darkAqua)] {
@@ -104,3 +104,17 @@ precondition(!LoginSettings.isLoginLaunch(launchEvent(reason: OSType(keyAELaunch
 precondition(!LoginSettings.isLoginLaunch(launchEvent(id: AEEventID(kAEReopenApplication), reason: OSType(keyAELaunchedAsLogInItem))))
 precondition(!LoginSettings.isLoginLaunch(launchEvent(reason: OSType(keyAELaunchedAsLogInItem), eventClass: 0)))
 print("Login reason descriptor checks passed; no SM registration, defaults mutation or real login attempted.")
+final class CloseProbe: NSObject, NSWindowDelegate {
+    var requests = 0
+    func windowShouldClose(_ sender: NSWindow) -> Bool { requests += 1; return false }
+}
+let closeProbe = CloseProbe()
+window.delegate = closeProbe
+for modifiers: NSEvent.ModifierFlags in [.command, [.command, .capsLock], [.command, .function]] {
+    let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: modifiers, timestamp: 0,
+        windowNumber: window.windowNumber, context: nil, characters: "w", charactersIgnoringModifiers: "w", isARepeat: false, keyCode: 13)!
+    let before = closeProbe.requests
+    precondition(window.performKeyEquivalent(with: event))
+    precondition(closeProbe.requests == before + 1, "Command-W must reach the native close action even with Caps Lock/Function flags")
+}
+print("Native Command-W close requests verified; no visible window opened.")

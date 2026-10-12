@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+. ./version.env
 swift build
 binary_dir="$(swift build --show-bin-path)"
 fixture_binary="$(mktemp -t prewarm-appearance)"
@@ -10,4 +11,4 @@ swiftc -I "$binary_dir" "$binary_dir/PrewarmCore.o" \
   Sources/Prewarm/AboutController.swift Sources/Prewarm/LoginSettings.swift \
   Sources/Prewarm/PrewarmPanel.swift Sources/Prewarm/PrewarmPanelHost.swift \
   scripts/AppearanceReview/main.swift -o "$fixture_binary"
-"$fixture_binary" "$PWD"
+"$fixture_binary" "$PWD" "$PREWARM_VERSION" "$PREWARM_BUILD"
