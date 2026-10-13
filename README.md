@@ -16,7 +16,7 @@ open build/Prewarm.app
 
 For a permanent local installation, quit Prewarm, copy `build/Prewarm.app` to `~/Applications/Prewarm.app`, and launch that copy. Enable warming and allow the macOS microphone permission prompt. macOS displays its microphone privacy indicator while warming. Select the Scarlett explicitly before enabling if the system default could be AirPods: keeping a Bluetooth mic active can affect its audio mode and battery.
 
-The local build is ad-hoc signed because no signing identity is available. The current ad-hoc designated requirement is tied to the executable code-directory hash (verified with `codesign -d -r-`). Changing and re-signing the app changes that identity, so macOS may ask for microphone permission again. The stable bundle ID alone does not prevent this. No permission bypass or TCC modification is attempted. `PREWARM_SIGNING_IDENTITY` can supply a real signing identity; Developer ID signing and notarization are unavailable. Remote publication is pending the admitted Hub GitHub route; Homebrew submission is deferred. A privately maintained local self-signed identity could give development builds a certificate-based identity, but creating/importing its certificate and private key or changing trust is a separate Keychain/security operation; this project has not done so. It would not substitute for Developer ID signing or notarization for distribution.
+The local build is ad-hoc signed because no signing identity is available. The current ad-hoc designated requirement is tied to the executable code-directory hash (verified with `codesign -d -r-`). Changing and re-signing the app changes that identity, so macOS may ask for microphone permission again. The stable bundle ID alone does not prevent this. No permission bypass or TCC modification is attempted. `PREWARM_SIGNING_IDENTITY` can supply a real signing identity; Developer ID signing and notarization are unavailable. Prewarm 1.0.0 (17) is published in the [GitHub release](https://github.com/ethanproia/Prewarm/releases/tag/v1.0.0), with the Apple Silicon ZIP, checksum and build receipt. Homebrew submission is deferred. A privately maintained local self-signed identity could give development builds a certificate-based identity, but creating/importing its certificate and private key or changing trust is a separate Keychain/security operation; this project has not done so. It would not substitute for Developer ID signing or notarization for distribution.
 
 ## Recovery and privacy
 
@@ -47,7 +47,7 @@ Original deterministic vector artwork combines a flame-shaped microphone with it
 
 Local derivative of [Drew Burchfield's macos-mic-keepwarm](https://github.com/drewburchfield/macos-mic-keepwarm) at upstream commit `20aa116e03dc2ae4b47a1d15a6134507947c9093`, imported from its public GitHub archive. Original MIT license and copyright are preserved in `LICENSE`. The original CLI and installer are retained under `upstream/` for provenance, outside the build targets. The app rewrites lifecycle and UI around that capture/discard approach. `APPLE_FEEDBACK.md` is an upstream hypothesis, not a confirmed root cause for this setup.
 
-Remote repository creation is pending the approved Hub GitHub route. No upstream release workflow is active for this local derivative.
+The owned [Prewarm repository](https://github.com/ethanproia/Prewarm) is a GitHub fork of the upstream project. The upstream `master` history remains preserved; Prewarm uses `main`. No upstream release workflow is active for this derivative.
 
 ## Release archive
 
