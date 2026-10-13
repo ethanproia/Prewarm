@@ -1,6 +1,6 @@
 # Prewarm 1.0.0 release plan
 
-Status: accepted by parent and independent source reviewer; bounded implementation in progress.
+Status: completed. [Prewarm 1.0.0 (17)](https://github.com/ethanproia/Prewarm/releases/tag/v1.0.0) is published at exact source `e9d40d1c014774776804ecb7aa033b4d0f1e5226`; downloaded assets, checksum, signature and installed executable identity were verified. The accepted UI is unchanged and Homebrew remains deferred.
 Accepted baseline: `0ffd08655a548ac2999845f168e05abe58ed49a8`, installed 0.1.2 (16).
 The accepted UI, capture behavior and preferences are locked. Homebrew is a later project.
 
@@ -77,10 +77,7 @@ honestly. Never change TCC, trust, certificates or security settings. Publish on
 the architecture actually built and inspected, not an untested universal claim.
 
 Parent owns reviewed main integration, the 1.0.0 tag, tracker/Hub updates and
-publication through the admitted GitHub route. That route currently rejects the
-caller; no alternate authentication/provider route is allowed. The About GitHub
-action stays disabled until an actual owned repository URL exists. Route failure
-must be reported as a publication blocker, not hidden by a local tag/archive.
+publication through the admitted GitHub route. The repaired native Codex binding now returns the actual personal identity. Source push used the Hub route; fork/default-branch/release operations unavailable from Hub used the existing native GitHub CLI under Ethan’s explicit one-run admission exception, with its own identity verified and no credential copying. The release tag remains tied to the reviewed source and archive. The installed app and its accepted UI, including the existing About state, were preserved.
 
 ## Stop condition
 
@@ -91,4 +88,4 @@ Public release completion additionally requires admitted-route push/tag/archive
 publication and live tracker links. If that route remains blocked, deliver the
 complete local candidate and exact unresolved blocker without claiming release.
 
-Commit map: `9cccf44` fixes diagnostic ownership, native close modifiers and retired presentation state; the next release-packaging unit owns shared metadata, fresh staging, archive validation, truthful docs and fixture checks. Each unit stays below 400 authored changed lines; generated About PNGs are excluded. Accepted baseline backup: `backup/accepted-build16-0ffd086`.
+Commit map: `9cccf44` fixes diagnostic ownership, native close modifiers and retired presentation state; `e9d40d1` completes shared metadata, fresh staging, archive validation, truthful docs and fixture checks. Each unit stays below 400 authored changed lines; generated About PNGs are excluded. Accepted baseline backup: `backup/accepted-build16-0ffd086`.
