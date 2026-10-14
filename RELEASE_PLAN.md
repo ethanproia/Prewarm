@@ -1,8 +1,8 @@
 # Prewarm 1.0.0 release plan
 
-Status: completed. [Prewarm 1.0.0 (17)](https://github.com/ethanproia/Prewarm/releases/tag/v1.0.0) is published at exact source `e9d40d1c014774776804ecb7aa033b4d0f1e5226`; downloaded assets, checksum, signature and installed executable identity were verified. The accepted UI is unchanged and Homebrew remains deferred.
+Status: completed. [Prewarm 1.0.0 (17)](https://github.com/ethanproia/Prewarm/releases/tag/v1.0.0) is published at exact source `e9d40d1c014774776804ecb7aa033b4d0f1e5226`; downloaded assets, checksum, signature and installed executable identity were verified. The accepted UI is unchanged. Official Homebrew preparation is tracked separately in [issue #3](https://github.com/ethanproia/Prewarm/issues/3); it is not a completed distribution channel.
 Accepted baseline: `0ffd08655a548ac2999845f168e05abe58ed49a8`, installed 0.1.2 (16).
-The accepted UI, capture behavior and preferences are locked. Homebrew is a later project.
+The accepted UI, capture behavior and preferences are locked. Homebrew preparation preserves this behavior lock.
 
 ## Audit and bounded remedies
 
@@ -89,3 +89,10 @@ publication and live tracker links. If that route remains blocked, deliver the
 complete local candidate and exact unresolved blocker without claiming release.
 
 Commit map: `9cccf44` fixes diagnostic ownership, native close modifiers and retired presentation state; `e9d40d1` completes shared metadata, fresh staging, archive validation, truthful docs and fixture checks. Each unit stays below 400 authored changed lines; generated About PNGs are excluded. Accepted baseline backup: `backup/accepted-build16-0ffd086`.
+
+
+## Official Homebrew preparation
+
+Full-app and cask adversarial reviews by `gpt-6-astra` found no newly confirmed source or cask defect at the released target. Fresh policy tests passed. The [cask draft](https://github.com/ethanproia/homebrew-cask/blob/prewarm-1.0.0/Casks/p/prewarm.rb) references the exact published Apple Silicon ZIP and restricts architecture accordingly.
+
+The actual new-cask audit failed Gatekeeper signing and GitHub fork/canonical-repository checks. Official submission additionally depends on [Homebrew's public-interest and repository-age criteria](https://docs.brew.sh/Package-Acceptance-Policy#notability). No upstream PR, install/uninstall success, real login or older-macOS runtime acceptance is claimed. Resolve distribution signing/notarization and upstream eligibility, then verify the final downloaded artifact and declared platforms before submission. Keep the existing public release and accepted UI intact.
